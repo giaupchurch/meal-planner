@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Meal Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage: {
+              50: '#f6f7f4',
+              100: '#e8f0e3',
+              200: '#d4e4cc',
+              300: '#b5d1a4',
+              400: '#8cb369',
+              500: '#6b9c4d',
+              600: '#5b8c5a',
+              700: '#466d3a',
+              800: '#3a5832',
+              900: '#31492b',
+            }
+          },
+          fontFamily: {
+            sans: ['DM Sans', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            'soft': '0 2px 8px rgba(0, 0, 0, 0.06)',
+            'soft-md': '0 4px 12px rgba(0, 0, 0, 0.08)',
+            'soft-lg': '0 4px 20px rgba(0, 0, 0, 0.1)',
+          },
+          borderRadius: {
+            '2xl': '1rem',
+            '3xl': '1.25rem',
+            '4xl': '1.5rem',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9faf8;
+    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .dragging { opacity: 0.5; transform: scale(0.95); }
+    .drop-target { background: #e8f0e3 !important; border-color: #8cb369 !important; }
+    .btn-primary {
+      background: #8cb369;
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: #6b9c4d;
+      box-shadow: 0 4px 12px rgba(140, 179, 105, 0.3);
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+    .card {
+      background: white;
+      border-radius: 1.25rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA39B' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useRef } = React;
+
+    // Sample recipe data
+    const recipes = [
+      {
+        id: 1,
+        category: "Dinner",
+        name: "Browned Sage Butter Chicken Piccata",
+        shortName: "Chicken Piccata",
+        image: "https://www.halfbakedharvest.com/wp-content/uploads/2020/10/Browned-Sage-Butter-Chicken-Piccata-with-Mushroom-Pasta-1.jpg",
+        protein: "Chicken",
+        cookingStyle: "Stovetop",
+        handsOnTime: 45,
+        totalTime: "45 min",
+        effort: "Medium",
+        healthy: false,
+        season: "Anytime",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://www.halfbakedharvest.com/browned-sage-butter-chicken-piccata-with-mushroom-pasta/",
+        notes: "Skip mushroom sauce, serve with wide pasta. Consider doubling the sauce ingredients.",
+        suggestedSides: [],
+        goodForCrowd: true,
+        freezerFriendly: false,
+        ingredients: [
+          "4 chicken cutlets (or 2 breasts, halved horizontally)",
+          "1/3 cup all-purpose flour",
+          "4 tbsp olive oil",
+          "4 tbsp salted butter",
+          "12 fresh sage leaves",
+          "1/2 cup dry white wine",
+          "1/3 cup fresh lemon juice",
+          "2 tbsp capers, drained",
+          "1 lb pappardelle pasta",
+          "4 cups mixed mushrooms",
+          "1/3 cup heavy cream",
+          "1/2 cup parmesan, grated"
+        ],
+        instructions: [
+          "Season chicken with salt & pepper. Dredge in flour.",
+          "Heat olive oil in large skillet over medium-high. Sear chicken 3-5 min per side until golden. Remove and set aside.",
+          "Add butter and sage to skillet. Sear sage until crisp, about 1 min. Remove sage.",
+          "Pour in wine and lemon juice, cook 1 min. Add capers, season. Return chicken, simmer 5-10 min.",
+          "Cook pasta according to package. Reserve 1/2 cup pasta water.",
+          "In another skillet, sauté mushrooms in olive oil over high heat until golden.",
+          "Toss pasta with cream, cheeses, and pasta water. Top with chicken and crispy sage."
+        ]
+      },
+      {
+        id: 2,
+        category: "Dinner",
+        name: "Taco Pasta",
+        shortName: "Taco Pasta",
+        image: "https://thecozycook.com/wp-content/uploads/2021/06/Taco-Pasta-Recipe-2.jpg",
+        protein: "Beef",
+        cookingStyle: "One Pot",
+        handsOnTime: 15,
+        totalTime: "30 min",
+        effort: "Easy",
+        healthy: false,
+        season: "Fall/Winter",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://thecozycook.com/taco-pasta/",
+        notes: "Doesn't look pretty but tastes great",
+        suggestedSides: [],
+        goodForCrowd: true,
+        freezerFriendly: false,
+        ingredients: [
+          "1 lb ground beef (85% lean)",
+          "1 tbsp butter",
+          "2 cloves garlic, minced",
+          "1 oz packet taco seasoning",
+          "1 tbsp Worcestershire sauce",
+          "2 tbsp tomato paste",
+          "1 cup beef broth",
+          "1 cup chicken broth",
+          "1 cup whole milk (room temp)",
+          "1 can (10 oz) Rotel tomatoes",
+          "1/2 lb medium pasta shells",
+          "1 cup cheddar cheese, shredded",
+          "1 cup Monterey Jack cheese, shredded",
+          "4 oz Velveeta, cubed"
+        ],
+        instructions: [
+          "Shred cheeses from block, set aside at room temp.",
+          "Cook and crumble ground beef over medium-high heat. Drain grease.",
+          "Melt butter in same pot, add garlic and cook 1 min.",
+          "Add taco seasoning, Worcestershire, and tomato paste. Stir to coat.",
+          "Pour in both broths, milk, and Rotel. Bring to a boil.",
+          "Add pasta shells, reduce heat to medium. Simmer 12-15 min, stirring often, until pasta is cooked.",
+          "Remove from heat. Stir in all cheeses until melted and creamy.",
+          "Top with sour cream, cilantro, or jalapeños if desired."
+        ]
+      },
+      {
+        id: 3,
+        category: "Dinner",
+        name: "Moroccan Pork Tenderloin with Carrots",
+        shortName: "Moroccan Pork",
+        image: "https://substackcdn.com/image/fetch/w_800,c_limit,f_auto,q_auto:good/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F5cdfbc41-0652-4261-a4b5-ecd9c23d4032_1456x1049.webp",
+        protein: "Pork",
+        cookingStyle: "Sheet Pan",
+        handsOnTime: 45,
+        totalTime: "60 min",
+        effort: "Medium",
+        healthy: true,
+        season: "Anytime",
+        madeBefore: true,
+        familyFavorite: false,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://whattocook.substack.com/p/moroccan-pork-tenderloin-and-carrots",
+        notes: "Make with pita fries and whipped feta. Delightful flavors but somewhat involved.",
+        suggestedSides: ["Couscous"],
+        goodForCrowd: true,
+        freezerFriendly: false,
+        ingredients: [
+          "2 pork tenderloins (1-1.5 lb each)",
+          "1.5 lbs small carrots, halved lengthwise",
+          "3 tbsp olive oil",
+          "2 tbsp honey",
+          "1.5 tsp smoked paprika",
+          "1.5 tsp ground cumin",
+          "1/2 tsp turmeric",
+          "1/4 tsp ground ginger",
+          "1/4 tsp cinnamon",
+          "For whipped feta: 8 oz feta, 3/4 cup pistachios, 1/4 cup yogurt, cilantro",
+          "For pita fries: 3-4 pita, olive oil, dried dill, lemon zest"
+        ],
+        instructions: [
+          "Preheat oven to 400°F.",
+          "Toss carrots and pork on sheet pan with olive oil, honey, and all spices. Season with salt.",
+          "Roast 15-20 min until pork reaches 130°F internal temp.",
+          "Meanwhile, cut pita into strips, toss with oil, dill, salt, garlic powder, lemon zest. Bake 10-15 min until golden.",
+          "Make whipped feta: blend feta, pistachios, cilantro, olive oil, yogurt, garlic, and lemon juice until smooth.",
+          "Switch oven to broil. Broil pork and carrots 3-5 min until browned and pork reaches 140°F.",
+          "Rest pork 5 min, then slice. Serve with carrots, whipped feta, and pita fries."
+        ]
+      },
+      {
+        id: 4,
+        category: "Dinner",
+        name: "One-Dish Chicken with Lemony White Beans",
+        shortName: "Chicken & White Beans",
+        image: "https://thedefineddish.com/wp-content/uploads/2025/08/Braised-Chicken-with-Lemony-Beans-6-scaled.jpg",
+        protein: "Chicken",
+        cookingStyle: "Oven",
+        handsOnTime: 15,
+        totalTime: "50 min",
+        effort: "Easy",
+        healthy: true,
+        season: "Fall/Winter",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://thedefineddish.com/one-pan-chicken-with-lemony-white-beans/",
+        notes: "Use 8-10 thighs, consider a third can of beans.",
+        suggestedSides: ["Crusty bread", "Side salad"],
+        goodForCrowd: false,
+        freezerFriendly: true,
+        ingredients: [
+          "8-10 bone-in, skin-on chicken thighs",
+          "2 cans (15 oz) cannellini beans, drained",
+          "2 shallots, thinly sliced",
+          "6 garlic cloves, smashed",
+          "1/2 cup Castelvetrano olives, torn",
+          "1/2 cup dry white wine (or chicken broth)",
+          "1 large lemon, zested and sliced",
+          "1 tbsp fresh oregano",
+          "2 tbsp olive oil",
+          "1/2 tsp crushed red pepper flakes",
+          "Fresh basil for serving"
+        ],
+        instructions: [
+          "Preheat oven to 425°F.",
+          "In a 9x13 baking dish, combine beans, shallots, garlic, olives, wine, lemon slices, oregano, 1 tsp salt, 1/2 tsp pepper, and red pepper flakes.",
+          "Season chicken thighs with remaining salt and pepper. Nestle into bean mixture, skin-side up.",
+          "Drizzle chicken with olive oil and sprinkle with lemon zest.",
+          "Roast 35-40 minutes until chicken skin is golden and crispy, and internal temp reaches 165°F.",
+          "Let rest 5 minutes. Garnish with fresh basil and serve."
+        ]
+      },
+      {
+        id: 5,
+        category: "Dinner",
+        name: "Salmon with Couscous and Broccoli",
+        shortName: "Salmon & Couscous",
+        image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&h=300&fit=crop",
+        protein: "Fish",
+        cookingStyle: "Sheet Pan",
+        handsOnTime: 15,
+        totalTime: "30 min",
+        effort: "Easy",
+        healthy: true,
+        season: "Anytime",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: false,
+        pantryReady: false,
+        wingIt: true,
+        quickMethod: "Salmon at 425°, box couscous, roast broccoli on same pan",
+        link: "",
+        notes: "",
+        suggestedSides: [],
+        goodForCrowd: true,
+        freezerFriendly: false
+      },
+      {
+        id: 6,
+        category: "Dinner",
+        name: "Molly's Grilled Chicken",
+        shortName: "Grilled Chicken",
+        image: "https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=400&h=300&fit=crop",
+        protein: "Chicken",
+        cookingStyle: "Grill",
+        handsOnTime: 30,
+        totalTime: "45 min",
+        effort: "Easy",
+        healthy: true,
+        season: "Spring/Summer",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: false,
+        pantryReady: false,
+        wingIt: true,
+        quickMethod: "Marinate with apple cider vinegar, oil, salt & pepper. Grill until done. Cook corn in microwave (see Papa Bear's info) or boil 5-10 min.",
+        link: "",
+        notes: "Molly's recipe - simple but delicious. Serve with corn.",
+        suggestedSides: [
+          "Grilled veggies (bell peppers, mushrooms, onions)",
+          "Side salad"
+        ],
+        goodForCrowd: true,
+        freezerFriendly: false
+      },
+      {
+        id: 7,
+        category: "Dinner",
+        name: "Rob and Paula's Chicken Pot Pie",
+        shortName: "Chicken Pot Pie",
+        image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=300&fit=crop",
+        protein: "Chicken",
+        cookingStyle: "Oven",
+        handsOnTime: 45,
+        totalTime: "90 min",
+        effort: "Medium",
+        healthy: false,
+        season: "Fall/Winter",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://www.allrecipes.com/recipe/26317/chicken-pot-pie-ix/",
+        notes: "Rob and Paula's recipe - a family favorite!",
+        suggestedSides: ["Side salad", "Cranberry sauce"],
+        goodForCrowd: false,
+        freezerFriendly: true,
+        ingredients: [
+          "1 lb boneless skinless chicken breast, cubed",
+          "1 cup sliced carrots",
+          "1 cup frozen green peas",
+          "½ cup sliced celery",
+          "⅓ cup butter",
+          "⅓ cup chopped onion",
+          "⅓ cup all-purpose flour",
+          "½ tsp salt",
+          "¼ tsp black pepper",
+          "¼ tsp celery seed",
+          "1¾ cups chicken broth",
+          "⅔ cup milk",
+          "2 (9-inch) unbaked pie crusts"
+        ],
+        instructions: [
+          "Preheat oven to 425°F.",
+          "Combine chicken, carrots, peas, and celery in a saucepan. Add water to cover and boil for 15 minutes. Drain and set aside.",
+          "Melt butter in another saucepan over medium heat. Add onion and cook until soft (5-7 min). Stir in flour, salt, pepper, and celery seed.",
+          "Slowly stir in chicken broth and milk. Simmer until thick (5-10 min).",
+          "Place chicken and vegetables in bottom pie crust. Pour broth mixture over top.",
+          "Cover with top crust, seal edges, and cut slits in top.",
+          "Bake until golden brown and bubbly, 30-35 minutes. Cool 10 minutes before serving."
+        ]
+      },
+      {
+        id: 8,
+        category: "Dinner",
+        name: "One-Skillet Rotisserie Chicken Pot Pie",
+        shortName: "Skillet Pot Pie",
+        image: "https://images.unsplash.com/photo-1585325701165-351af916e581?w=400&h=300&fit=crop",
+        protein: "Chicken",
+        cookingStyle: "Oven",
+        handsOnTime: 15,
+        totalTime: "45 min",
+        effort: "Easy",
+        healthy: false,
+        season: "Fall/Winter",
+        madeBefore: false,
+        familyFavorite: false,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://www.instagram.com/reel/DO9a_3vkqMe/?hl=en",
+        notes: "📹 Has video! Consider pouring into a pie shell instead of puff pastry on top",
+        suggestedSides: ["Side salad"],
+        goodForCrowd: true,
+        freezerFriendly: true,
+        ingredients: [
+          "2 tbsp butter",
+          "2 tbsp flour",
+          "1 small onion, chopped (optional)",
+          "1 (12-16 oz) bag frozen mixed veggies",
+          "1½ cups chicken broth",
+          "1 cup Fairlife whole milk",
+          "2 cups shredded rotisserie chicken",
+          "1 tsp fresh thyme (or ½ tsp dried)",
+          "Salt + black pepper to taste",
+          "1 sheet puff pastry, thawed",
+          "1 egg, beaten (optional, for golden crust)"
+        ],
+        instructions: [
+          "Preheat oven to 400°F.",
+          "In a 10-12 inch oven-safe skillet, melt butter over medium heat. Sprinkle flour and stir until nutty smelling.",
+          "Slowly whisk in broth and milk. Simmer, stirring, until slightly thickened (about 3 min).",
+          "Add onion (if using) and cook 3 min. Stir in frozen veggies and cook until warmed (about 3 min).",
+          "Stir in rotisserie chicken, thyme, salt, and pepper. Taste and adjust seasoning.",
+          "Remove from heat. Lay puff pastry over filling, cut steam vents. Brush with egg wash if using.",
+          "Bake until pastry is golden and filling bubbles at edges, about 25 min.",
+          "Let rest 10 minutes before serving."
+        ]
+      },
+      {
+        id: 9,
+        category: "Dinner",
+        name: "Turkey Meatloaf",
+        shortName: "Turkey Meatloaf",
+        image: "https://www.inspiredtaste.net/wp-content/uploads/2025/05/Turkey-Meatloaf-Recipe.jpg",
+        protein: "Turkey",
+        cookingStyle: "Oven",
+        handsOnTime: 30,
+        totalTime: "90 min",
+        effort: "Medium",
+        healthy: true,
+        season: "Fall/Winter",
+        madeBefore: false,
+        familyFavorite: false,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://www.inspiredtaste.net/21535/unbelievably-moist-turkey-meatloaf-recipe/",
+        notes: "Secret to moist meatloaf is the mushrooms!",
+        suggestedSides: ["Mashed potatoes", "Roasted vegetables", "Green beans"],
+        goodForCrowd: true,
+        freezerFriendly: true,
+        ingredients: [
+          "1-1¼ lb ground turkey (90-92% lean)",
+          "8 oz cremini mushrooms, very finely chopped",
+          "1 medium onion, finely chopped",
+          "2 garlic cloves, minced",
+          "1 tbsp oil",
+          "¾ tsp salt",
+          "½ tsp black pepper",
+          "1 tbsp Worcestershire sauce",
+          "7 tbsp ketchup, divided",
+          "1 cup panko breadcrumbs",
+          "⅓ cup milk",
+          "2 large eggs, beaten"
+        ],
+        instructions: [
+          "Preheat oven to 400°F. Line a baking sheet with foil and lightly oil.",
+          "Heat oil in skillet over medium-low. Cook onion until soft (5 min), add garlic (1 min), then mushrooms with ½ tsp salt and ¼ tsp pepper. Cook until liquid evaporates (10 min).",
+          "Transfer to bowl, stir in Worcestershire and 3 tbsp ketchup. Cool 5 min.",
+          "Mix breadcrumbs with milk. Stir into mushroom mixture with eggs. Gently mix in turkey, remaining salt and pepper.",
+          "Form into 9x5 inch oval on baking sheet. Spread remaining 4 tbsp ketchup on top.",
+          "Bake until internal temp reaches 170°F, about 50 min. Rest 10 min before slicing."
+        ]
+      },
+      {
+        id: 10,
+        category: "Dinner",
+        name: "Creamy Tuscan Chicken",
+        shortName: "Tuscan Chicken",
+        image: "https://hips.hearstapps.com/hmg-prod/images/creamy-tuscan-chicken-index-66f674c570e20.jpg?crop=0.8891228070175439xw:1xh;center,top&resize=1200:*",
+        protein: "Chicken",
+        cookingStyle: "Stovetop",
+        handsOnTime: 15,
+        totalTime: "45 min",
+        effort: "Easy",
+        healthy: false,
+        season: "Anytime",
+        madeBefore: false,
+        familyFavorite: false,
+        leftovers: true,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://www.delish.com/cooking/recipe-ideas/a19636089/creamy-tuscan-chicken-recipe/",
+        notes: "Serve with bread, rice, pasta, or mashed potatoes to soak up the sauce!",
+        suggestedSides: ["Crusty bread", "Rice", "Pasta", "Mashed potatoes"],
+        goodForCrowd: false,
+        freezerFriendly: false,
+        ingredients: [
+          "1 tbsp olive oil",
+          "4 boneless skinless chicken breasts",
+          "Salt and pepper",
+          "1 tsp dried oregano",
+          "3 tbsp butter",
+          "3 cloves garlic, minced",
+          "1½ cups cherry tomatoes, halved",
+          "3 cups baby spinach",
+          "½ cup heavy cream",
+          "¼ cup freshly grated Parmesan",
+          "Lemon wedges for serving"
+        ],
+        instructions: [
+          "Heat oil in skillet over medium heat. Season chicken with salt, pepper, and oregano. Cook until golden and cooked through, 8 min per side. Remove and set aside.",
+          "In same skillet, melt butter. Add garlic and cook until fragrant (1 min).",
+          "Add tomatoes, season with salt and pepper. Cook until bursting, then add spinach and cook until wilted.",
+          "Stir in heavy cream and Parmesan. Simmer until slightly reduced (3 min).",
+          "Return chicken to skillet and cook until heated through (5-7 min). Serve with lemon wedges."
+        ]
+      },
+      {
+        id: 11,
+        category: "Dinner",
+        name: "Easy Chicken Satay",
+        shortName: "Chicken Satay",
+        image: "https://images.unsplash.com/photo-1529563021893-cc83c992d75d?w=400&h=300&fit=crop",
+        protein: "Chicken",
+        cookingStyle: "Sheet Pan",
+        handsOnTime: 15,
+        totalTime: "30 min",
+        effort: "Easy",
+        healthy: true,
+        season: "Anytime",
+        madeBefore: true,
+        familyFavorite: true,
+        leftovers: false,
+        pantryReady: false,
+        wingIt: true,
+        quickMethod: "Marinate chicken thighs in TJ's peanut sauté sauce. Chop, roast at 425° for 16 min (stir halfway), broil last 2 min. Serve over rice with peppers/onions. Drizzle with sauce + lime juice, top with peanuts & cilantro.",
+        link: "",
+        notes: "Make rice. Save some sauce, mix with lime juice for drizzle. Chop peppers & onion to roast on same pan. Done at 165° but thighs can go higher.",
+        suggestedSides: [],
+        goodForCrowd: true,
+        freezerFriendly: false,
+        ingredients: [
+          "Boneless skinless chicken thighs",
+          "Trader Joe's chicken peanut sauté sauce",
+          "Rice",
+          "Red or green bell pepper, chopped",
+          "Onion, chopped",
+          "Lime juice (for drizzle)",
+          "Chopped peanuts",
+          "Cilantro (optional)"
+        ],
+        instructions: [
+          "Marinate chicken thighs in TJ's peanut sauté sauce (save some sauce for later).",
+          "Start rice.",
+          "Chop marinated chicken into pieces. Spread on baking sheet with chopped peppers and onion.",
+          "Roast at 425°F for about 16 minutes, stirring halfway through.",
+          "Broil for last 2 minutes until slightly charred. Chicken done at 165°F (thighs can go higher).",
+          "Mix reserved sauce with lime juice for drizzle.",
+          "Serve chicken and veggies over rice. Drizzle with sauce, top with peanuts and cilantro."
+        ]
+      },
+      {
+        id: 12,
+        category: "Dinner",
+        name: "Steak with Chimichurri",
+        shortName: "Chimichurri Steak",
+        image: "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=300&fit=crop",
+        protein: "Beef",
+        cookingStyle: "Grill",
+        handsOnTime: 20,
+        totalTime: "30 min",
+        effort: "Easy",
+        healthy: true,
+        season: "Spring/Summer",
+        madeBefore: false,
+        familyFavorite: false,
+        leftovers: false,
+        pantryReady: false,
+        wingIt: false,
+        quickMethod: "",
+        link: "https://cafedelites.com/authentic-chimichurri-uruguay-argentina/",
+        notes: "Make chimichurri ahead of time for best flavor. Can also pan-sear the steak.",
+        suggestedSides: ["Roasted potatoes", "Grilled vegetables", "Side salad", "Corn on the cob"],
+        goodForCrowd: true,
+        freezerFriendly: false,
+        ingredients: [
+          "1.5-2 lbs steak (ribeye, strip, or flank)",
+          "Salt and pepper",
+          "Olive oil for grilling",
+          "FOR CHIMICHURRI:",
+          "1/2 cup olive oil",
+          "2 tbsp red wine vinegar",
+          "1/2 cup fresh parsley, finely chopped",
+          "3-4 cloves garlic, minced",
+          "2 small red chilies, finely chopped (or 1/2 tsp red pepper flakes)",
+          "3/4 tsp dried oregano",
+          "1 tsp salt",
+          "1/2 tsp black pepper"
+        ],
+        instructions: [
+          "Make chimichurri: Mix olive oil, vinegar, parsley, garlic, chilies, oregano, salt, and pepper. Let sit at least 10 min (ideally 2+ hours).",
+          "Remove steak from fridge 30 min before cooking. Season generously with salt and pepper.",
+          "Heat grill to high heat (or heat cast iron skillet over high).",
+          "Grill steak 4-5 min per side for medium-rare (adjust for thickness and preference).",
+          "Rest steak 5-10 minutes before slicing.",
+          "Slice against the grain and spoon chimichurri generously over top.",
+          "Serve extra chimichurri on the side."
+        ]
+      }
+    ];
+
+    // Common sides that can be added to any meal
+    const COMMON_SIDES = [
+      "Side salad",
+      "Roasted vegetables",
+      "Rice",
+      "Bread/rolls",
+      "Soup",
+      "Corn",
+      "Mashed potatoes",
+      "Steamed broccoli"
+    ];
+
+    const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    // Special day statuses
+    const DAY_STATUSES = [
+      { id: 'eating_out', label: 'Eating Out', icon: '🍽️', color: 'bg-blue-50 text-blue-600' },
+      { id: 'takeout', label: 'Takeout', icon: '🥡', color: 'bg-amber-50 text-amber-600' },
+      { id: 'na', label: 'N/A', icon: '—', color: 'bg-gray-100 text-gray-500' },
+    ];
+
+    // Filter options
+    const PROTEINS = ['All', 'Chicken', 'Beef', 'Pork', 'Turkey', 'Fish', 'Vegetarian'];
+    const COOKING_STYLES = ['All', 'One Pot', 'Sheet Pan', 'Stovetop', 'Oven', 'Slow Cooker', 'Grill'];
+    const EFFORTS = ['All', 'Easy', 'Medium', 'Hard'];
+    const SEASONS = ['All', 'Spring/Summer', 'Fall/Winter', 'Anytime'];
+    const HANDS_ON_TIMES = ['All', '20 min or less', '30 min or less', '45 min or less', '1 hour or more'];
+    const CATEGORIES = ['Dinner', 'Breakfast', 'Appetizers', 'Desserts', 'Breads', 'Salads', 'All'];
+
+    // Get short meal name for display
+    const getShortName = (recipe) => {
+      if (!recipe) return '';
+      return recipe.shortName || recipe.name;
+    };
+
+    // Get personalized greeting based on time of day
+    const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'Good morning';
+      if (hour < 17) return 'Good afternoon';
+      return 'Good evening';
+    };
+
+    // Recipe Detail Modal component
+    function RecipeDetailModal({ recipe, onClose }) {
+      if (!recipe) return null;
+
+      return (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+          <div
+            className="bg-white w-full max-w-lg max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-soft-lg"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header with image */}
+            <div className="relative">
+              <img
+                src={recipe.image}
+                alt={recipe.name}
+                className="w-full h-52 object-cover"
+              />
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 w-9 h-9 bg-white/95 rounded-full flex items-center justify-center text-gray-500 hover:bg-white shadow-soft transition"
+              >
+                ✕
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-5">
+                <h2 className="text-xl font-bold text-white leading-tight">{recipe.name}</h2>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {/* Quick info badges */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                <span className="px-3 py-1.5 bg-sage-100 text-sage-700 rounded-full text-xs font-semibold">
+                  {recipe.protein}
+                </span>
+                <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                  {recipe.cookingStyle}
+                </span>
+                <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                  ⏱ {recipe.totalTime}
+                </span>
+                <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                  {recipe.effort}
+                </span>
+              </div>
+
+              {/* Notes */}
+              {recipe.notes && (
+                <div className="mb-5 p-4 bg-amber-50 rounded-2xl">
+                  <p className="text-sm text-amber-800">📝 {recipe.notes}</p>
+                </div>
+              )}
+
+              {/* Wing It quick method */}
+              {recipe.wingIt && recipe.quickMethod && (
+                <div className="mb-5 p-4 bg-sage-50 rounded-2xl">
+                  <p className="text-sm font-semibold text-sage-800 mb-1">Quick Method</p>
+                  <p className="text-sm text-sage-700">{recipe.quickMethod}</p>
+                </div>
+              )}
+
+              {/* Ingredients */}
+              {recipe.ingredients && recipe.ingredients.length > 0 && (
+                <div className="mb-5">
+                  <h3 className="font-semibold text-gray-800 mb-3">Ingredients</h3>
+                  <ul className="space-y-2">
+                    {recipe.ingredients.map((ing, i) => (
+                      <li key={i} className="text-sm text-gray-600 flex items-start gap-3">
+                        <span className="w-1.5 h-1.5 bg-sage-400 rounded-full mt-2 flex-shrink-0"></span>
+                        <span>{ing}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Instructions */}
+              {recipe.instructions && recipe.instructions.length > 0 && (
+                <div className="mb-5">
+                  <h3 className="font-semibold text-gray-800 mb-3">Instructions</h3>
+                  <ol className="space-y-3">
+                    {recipe.instructions.map((step, i) => (
+                      <li key={i} className="text-sm text-gray-600 flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 bg-sage-100 text-sage-700 rounded-full flex items-center justify-center text-xs font-semibold">
+                          {i + 1}
+                        </span>
+                        <span className="pt-0.5 leading-relaxed">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Suggested Sides */}
+              {recipe.suggestedSides && recipe.suggestedSides.length > 0 && (
+                <div className="mb-5 p-4 bg-blue-50 rounded-2xl">
+                  <p className="text-sm font-semibold text-blue-800 mb-2">🍴 Goes well with</p>
+                  <div className="flex flex-wrap gap-2">
+                    {recipe.suggestedSides.map((side, i) => (
+                      <span key={i} className="px-3 py-1 bg-white rounded-full text-xs text-blue-700 font-medium">
+                        {side}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* If no ingredients/instructions, show message */}
+              {(!recipe.ingredients || recipe.ingredients.length === 0) &&
+               (!recipe.instructions || recipe.instructions.length === 0) &&
+               !recipe.wingIt && (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-sm">Recipe details not yet added</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer with link */}
+            <div className="border-t border-gray-100 p-4">
+              {recipe.link ? (
+                <a
+                  href={recipe.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-3.5 btn-primary text-white rounded-full font-semibold transition text-center"
+                >
+                  View Original Recipe →
+                </a>
+              ) : (
+                <button
+                  onClick={onClose}
+                  className="w-full py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full font-semibold transition"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Modal component for day options
+    function DayModal({ day, dayPlan, onClose, onAddMeal, onSetStatus, onRemove, onViewRecipe, onAddSide, onRemoveSide, allDays, weekPlan }) {
+      const [showSidePicker, setShowSidePicker] = useState(false);
+      const [customSide, setCustomSide] = useState('');
+
+      const handleAddCustomSide = () => {
+        if (customSide.trim()) {
+          onAddSide(customSide.trim());
+          setCustomSide('');
+          setShowSidePicker(false);
+        }
+      };
+
+      // Get suggested sides from the recipe, or use common sides
+      const suggestedSides = dayPlan?.recipe?.suggestedSides?.length > 0
+        ? dayPlan.recipe.suggestedSides
+        : COMMON_SIDES;
+
+      return (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={onClose}>
+          <div
+            className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto shadow-soft-lg"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
+            <h3 className="text-xl font-bold text-gray-800 mb-1">{day}</h3>
+
+            {dayPlan ? (
+              <>
+                {dayPlan.isLeftover ? (
+                  <p className="text-sm text-sage-600 mb-5 font-medium">🍲 Leftovers: {dayPlan.leftoverMealName}</p>
+                ) : dayPlan.status ? (
+                  <p className="text-sm text-gray-600 mb-5">
+                    {DAY_STATUSES.find(s => s.id === dayPlan.status)?.icon} {DAY_STATUSES.find(s => s.id === dayPlan.status)?.label}
+                  </p>
+                ) : (
+                  <>
+                    {/* Main dish card */}
+                    <div className="bg-sage-50 rounded-2xl p-4 mb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-sage-600 font-semibold uppercase tracking-wide">Main</span>
+                          <p className="font-semibold text-gray-800 mt-0.5">{dayPlan.recipe?.name}</p>
+                        </div>
+                        <button
+                          onClick={() => onViewRecipe(dayPlan.recipe)}
+                          className="text-sage-600 text-sm font-semibold hover:text-sage-700"
+                        >
+                          View →
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Side dish section */}
+                    {dayPlan.side ? (
+                      <div className="bg-blue-50 rounded-2xl p-4 mb-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Side</span>
+                            <p className="font-semibold text-gray-800 mt-0.5">{dayPlan.side}</p>
+                          </div>
+                          <button
+                            onClick={onRemoveSide}
+                            className="text-red-400 text-sm font-medium hover:text-red-500"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : showSidePicker ? (
+                      <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-3">
+                          {dayPlan.recipe?.suggestedSides?.length > 0 ? 'Suggested Sides' : 'Quick Picks'}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {suggestedSides.map((side, i) => (
+                            <button
+                              key={i}
+                              onClick={() => { onAddSide(side); setShowSidePicker(false); }}
+                              className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:border-sage-400 hover:bg-sage-50 transition font-medium"
+                            >
+                              {side}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={customSide}
+                            onChange={(e) => setCustomSide(e.target.value)}
+                            placeholder="Or type your own..."
+                            className="flex-1 px-4 py-2.5 bg-white border-none rounded-xl text-sm focus:ring-2 focus:ring-sage-300 outline-none"
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddCustomSide()}
+                          />
+                          <button
+                            onClick={handleAddCustomSide}
+                            disabled={!customSide.trim()}
+                            className="px-5 py-2.5 btn-primary text-white rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setShowSidePicker(false)}
+                          className="w-full mt-3 text-gray-400 text-sm font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowSidePicker(true)}
+                        className="w-full py-4 mb-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 text-sm font-semibold hover:border-sage-300 hover:text-sage-500 transition"
+                      >
+                        + Add a side
+                      </button>
+                    )}
+                  </>
+                )}
+
+                <p className="text-xs text-gray-400 mb-4">Tip: Drag meals in the week view to move them!</p>
+
+                <button
+                  onClick={onRemove}
+                  className="w-full py-3.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-full font-semibold transition"
+                >
+                  Remove from {day}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-5">No meal planned</p>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={onAddMeal}
+                    className="w-full py-3.5 btn-primary text-white rounded-full font-semibold transition"
+                  >
+                    + Add a Meal
+                  </button>
+
+                  <div className="flex gap-2">
+                    {DAY_STATUSES.map(status => (
+                      <button
+                        key={status.id}
+                        onClick={() => onSetStatus(status.id)}
+                        className={`flex-1 py-3 rounded-2xl font-semibold transition text-sm ${status.color} hover:opacity-80`}
+                      >
+                        {status.icon} {status.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={onClose}
+              className="w-full py-3 mt-4 text-gray-400 font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Toast notification
+    function Toast({ message, onClose }) {
+      React.useEffect(() => {
+        const timer = setTimeout(onClose, 2500);
+        return () => clearTimeout(timer);
+      }, [onClose]);
+
+      return (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-2.5 rounded-full shadow-soft-lg z-50 text-sm font-medium">
+          {message}
+        </div>
+      );
+    }
+
+    // Grocery List Modal
+    function GroceryListModal({ weekPlan, onClose, onCopied }) {
+      const [excludedMeals, setExcludedMeals] = useState({});
+      const [copied, setCopied] = useState(false);
+
+      // Get all planned meals (not leftovers, not statuses)
+      const plannedMeals = useMemo(() => {
+        const meals = [];
+        DAYS.forEach(day => {
+          const plan = weekPlan[day];
+          if (plan?.recipe && !plan.isLeftover && !plan.status) {
+            meals.push({
+              day,
+              recipe: plan.recipe,
+              side: plan.side
+            });
+          }
+        });
+        return meals;
+      }, [weekPlan]);
+
+      const toggleMeal = (day) => {
+        setExcludedMeals(prev => ({
+          ...prev,
+          [day]: !prev[day]
+        }));
+      };
+
+      // Generate the grocery list text
+      const generateListText = () => {
+        const lines = ['🛒 Grocery List\n'];
+
+        plannedMeals.forEach(({ day, recipe, side }) => {
+          if (excludedMeals[day]) return;
+
+          lines.push(`\n📍 ${day}: ${recipe.shortName || recipe.name}`);
+          if (recipe.ingredients && recipe.ingredients.length > 0) {
+            recipe.ingredients.forEach(ing => {
+              lines.push(`  • ${ing}`);
+            });
+          } else {
+            lines.push(`  (No ingredients listed)`);
+          }
+
+          if (side) {
+            lines.push(`  + Side: ${side}`);
+          }
+        });
+
+        return lines.join('\n');
+      };
+
+      const handleCopy = async () => {
+        const text = generateListText();
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          onCopied?.();
+        } catch (err) {
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+          onCopied?.();
+        }
+      };
+
+      const includedCount = plannedMeals.filter(m => !excludedMeals[m.day]).length;
+
+      return (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+          <div
+            className="bg-white w-full max-w-lg max-h-[90vh] rounded-3xl overflow-hidden flex flex-col shadow-soft-lg"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">🛒 Grocery List</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{includedCount} meal{includedCount !== 1 ? 's' : ''} selected</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {plannedMeals.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <p className="text-5xl mb-3">📋</p>
+                  <p className="font-medium">No meals planned yet!</p>
+                  <p className="text-sm mt-1">Add some recipes to your week to generate a grocery list.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {plannedMeals.map(({ day, recipe, side }) => {
+                    const isExcluded = excludedMeals[day];
+                    return (
+                      <div
+                        key={day}
+                        className={`rounded-2xl border-2 transition ${
+                          isExcluded ? 'border-gray-100 bg-gray-50 opacity-50' : 'border-sage-200 bg-sage-50'
+                        }`}
+                      >
+                        {/* Meal header with toggle */}
+                        <div
+                          className="p-4 flex items-center justify-between cursor-pointer"
+                          onClick={() => toggleMeal(day)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition ${
+                              isExcluded ? 'border-gray-300 bg-white' : 'border-sage-500 bg-sage-500'
+                            }`}>
+                              {!isExcluded && <span className="text-white text-xs">✓</span>}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-800">{recipe.shortName || recipe.name}</p>
+                              <p className="text-xs text-gray-500">{day}</p>
+                            </div>
+                          </div>
+                          {side && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                              + {side}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Ingredients */}
+                        {!isExcluded && recipe.ingredients && recipe.ingredients.length > 0 && (
+                          <div className="px-4 pb-4 pt-0">
+                            <div className="bg-white rounded-xl p-3">
+                              <ul className="text-sm text-gray-600 space-y-1.5">
+                                {recipe.ingredients.map((ing, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="w-1.5 h-1.5 bg-sage-400 rounded-full mt-2 flex-shrink-0"></span>
+                                    <span>{ing}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+
+                        {!isExcluded && (!recipe.ingredients || recipe.ingredients.length === 0) && (
+                          <div className="px-4 pb-4">
+                            <p className="text-xs text-gray-400 italic">No ingredients listed for this recipe</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer with copy button */}
+            {plannedMeals.length > 0 && (
+              <div className="p-5 border-t border-gray-100 bg-gray-50">
+                <button
+                  onClick={handleCopy}
+                  disabled={includedCount === 0}
+                  className={`w-full py-3.5 rounded-full font-semibold transition flex items-center justify-center gap-2 ${
+                    copied
+                      ? 'bg-sage-500 text-white'
+                      : includedCount === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'btn-primary text-white'
+                  }`}
+                >
+                  {copied ? (
+                    <>✓ Copied to Clipboard!</>
+                  ) : (
+                    <>📋 Copy List to Clipboard</>
+                  )}
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-3">
+                  Paste into Apple Notes or share with your Claude bot
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function MealPlanner() {
+      const [weekPlan, setWeekPlan] = useState({});
+      const [filters, setFilters] = useState({
+        category: 'Dinner',
+        protein: 'All',
+        cookingStyle: 'All',
+        effort: 'All',
+        handsOnTime: 'All',
+        madeBefore: 'All',
+        familyFavorite: false,
+        season: 'All',
+        healthy: false,
+        leftovers: false,
+        pantryReady: false,
+        goodForCrowd: false,
+        freezerFriendly: false
+      });
+      const [showFilters, setShowFilters] = useState(true);
+      const [showMoreFilters, setShowMoreFilters] = useState(false);
+      const [selectedDay, setSelectedDay] = useState(null);
+      const [selectedRecipe, setSelectedRecipe] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [showGroceryList, setShowGroceryList] = useState(false);
+
+      // Drag and drop state
+      const [draggedDay, setDraggedDay] = useState(null);
+      const [dropTarget, setDropTarget] = useState(null);
+      const dragRef = useRef(null);
+
+      // Filter recipes
+      const filteredRecipes = useMemo(() => {
+        return recipes.filter(recipe => {
+          if (filters.category !== 'All' && recipe.category !== filters.category) return false;
+          if (filters.protein !== 'All' && recipe.protein !== filters.protein) return false;
+          if (filters.cookingStyle !== 'All' && recipe.cookingStyle !== filters.cookingStyle) return false;
+          if (filters.effort !== 'All' && recipe.effort !== filters.effort) return false;
+          if (filters.handsOnTime !== 'All') {
+            const time = recipe.handsOnTime;
+            if (filters.handsOnTime === '20 min or less' && time > 20) return false;
+            if (filters.handsOnTime === '30 min or less' && time > 30) return false;
+            if (filters.handsOnTime === '45 min or less' && time > 45) return false;
+            if (filters.handsOnTime === '1 hour or more' && time < 60) return false;
+          }
+          if (filters.madeBefore === 'Familiar' && !recipe.madeBefore) return false;
+          if (filters.madeBefore === 'New' && recipe.madeBefore) return false;
+          if (filters.familyFavorite && !recipe.familyFavorite) return false;
+          if (filters.season !== 'All' && recipe.season !== filters.season && recipe.season !== 'Anytime') return false;
+          if (filters.healthy && !recipe.healthy) return false;
+          if (filters.leftovers && !recipe.leftovers) return false;
+          if (filters.pantryReady && !recipe.pantryReady) return false;
+          if (filters.goodForCrowd && !recipe.goodForCrowd) return false;
+          if (filters.freezerFriendly && !recipe.freezerFriendly) return false;
+          return true;
+        });
+      }, [filters]);
+
+      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.cookingStyle !== 'All' || filters.season !== 'All' || filters.pantryReady || filters.goodForCrowd || filters.freezerFriendly;
+
+      // Find first available day
+      const findFirstAvailableDay = () => {
+        for (const day of DAYS) {
+          if (!weekPlan[day]) return day;
+        }
+        return null;
+      };
+
+      // Add recipe to first available day
+      const addToWeek = (recipe) => {
+        const day = findFirstAvailableDay();
+        if (!day) {
+          setToast("Week is full! Remove a meal first.");
+          return;
+        }
+        addToDay(day, recipe);
+        setToast(`Added to ${day}!`);
+      };
+
+      // Add recipe to specific day
+      const addToDay = (day, recipe) => {
+        const newPlan = { ...weekPlan, [day]: { recipe, isLeftover: false } };
+
+        if (recipe.leftovers) {
+          const dayIndex = DAYS.indexOf(day);
+          for (let i = dayIndex + 2; i < DAYS.length; i++) {
+            if (!newPlan[DAYS[i]]) {
+              newPlan[DAYS[i]] = {
+                recipe: recipe,
+                isLeftover: true,
+                leftoverFrom: day,
+                leftoverMealName: recipe.name,
+                leftoverShortName: recipe.shortName || recipe.name
+              };
+              setToast(`Added to ${day} + leftovers on ${DAYS[i]}!`);
+              break;
+            }
+          }
+        }
+
+        setWeekPlan(newPlan);
+        setSelectedDay(null);
+      };
+
+      // Set day status
+      const setDayStatus = (day, statusId) => {
+        setWeekPlan({ ...weekPlan, [day]: { status: statusId } });
+        setSelectedDay(null);
+        setToast(`${day} marked as ${DAY_STATUSES.find(s => s.id === statusId)?.label}`);
+      };
+
+      // Remove day
+      const clearDay = (day) => {
+        const newPlan = { ...weekPlan };
+        Object.keys(newPlan).forEach(d => {
+          if (newPlan[d]?.leftoverFrom === day) {
+            delete newPlan[d];
+          }
+        });
+        delete newPlan[day];
+        setWeekPlan(newPlan);
+        setSelectedDay(null);
+        setToast(`Removed from ${day}`);
+      };
+
+      // Add side to a day
+      const addSideToDay = (day, sideName) => {
+        const newPlan = { ...weekPlan };
+        if (newPlan[day]) {
+          newPlan[day] = { ...newPlan[day], side: sideName };
+          setWeekPlan(newPlan);
+          setToast(`Added ${sideName} to ${day}`);
+        }
+      };
+
+      // Remove side from a day
+      const removeSideFromDay = (day) => {
+        const newPlan = { ...weekPlan };
+        if (newPlan[day]) {
+          const { side, ...rest } = newPlan[day];
+          newPlan[day] = rest;
+          setWeekPlan(newPlan);
+          setToast(`Removed side from ${day}`);
+        }
+      };
+
+      // Drag and drop handlers
+      const handleDragStart = (day, e) => {
+        if (!weekPlan[day]) return;
+        setDraggedDay(day);
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+        }
+      };
+
+      const handleDragOver = (day, e) => {
+        e.preventDefault();
+        if (draggedDay && day !== draggedDay) {
+          setDropTarget(day);
+        }
+      };
+
+      const handleDragLeave = () => {
+        setDropTarget(null);
+      };
+
+      const handleDrop = (toDay) => {
+        if (!draggedDay || draggedDay === toDay) {
+          setDraggedDay(null);
+          setDropTarget(null);
+          return;
+        }
+
+        const newPlan = { ...weekPlan };
+        const fromMeal = newPlan[draggedDay];
+        const toMeal = newPlan[toDay];
+
+        // Clear old leftovers from the dragged meal
+        if (fromMeal && !fromMeal.isLeftover) {
+          Object.keys(newPlan).forEach(d => {
+            if (newPlan[d]?.leftoverFrom === draggedDay) {
+              delete newPlan[d];
+            }
+          });
+        }
+
+        // Swap or move
+        if (toMeal) {
+          // Swap meals
+          newPlan[draggedDay] = { ...toMeal, leftoverFrom: undefined };
+          newPlan[toDay] = { ...fromMeal, leftoverFrom: undefined };
+          setToast(`Swapped ${draggedDay.slice(0,3)} ↔ ${toDay.slice(0,3)}`);
+        } else {
+          // Move to empty slot
+          delete newPlan[draggedDay];
+          newPlan[toDay] = { ...fromMeal, leftoverFrom: undefined };
+          setToast(`Moved to ${toDay}`);
+        }
+
+        // Re-add leftovers if applicable
+        if (fromMeal?.recipe?.leftovers && !fromMeal.isLeftover) {
+          const dayIndex = DAYS.indexOf(toDay);
+          for (let i = dayIndex + 2; i < DAYS.length; i++) {
+            if (!newPlan[DAYS[i]]) {
+              newPlan[DAYS[i]] = {
+                recipe: fromMeal.recipe,
+                isLeftover: true,
+                leftoverFrom: toDay,
+                leftoverMealName: fromMeal.recipe.name,
+                leftoverShortName: fromMeal.recipe.shortName || fromMeal.recipe.name
+              };
+              break;
+            }
+          }
+        }
+
+        setWeekPlan(newPlan);
+        setDraggedDay(null);
+        setDropTarget(null);
+      };
+
+      const handleDragEnd = () => {
+        setDraggedDay(null);
+        setDropTarget(null);
+      };
+
+      // Touch handlers for mobile drag and drop
+      const handleTouchStart = (day, e) => {
+        if (!weekPlan[day]) return;
+        dragRef.current = { day, startX: e.touches[0].clientX, startY: e.touches[0].clientY };
+        // Set dragged after a small delay to differentiate from tap
+        setTimeout(() => {
+          if (dragRef.current?.day === day) {
+            setDraggedDay(day);
+          }
+        }, 150);
+      };
+
+      const handleTouchMove = (e) => {
+        if (!draggedDay) return;
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dayElement = element?.closest('[data-day]');
+        if (dayElement) {
+          const day = dayElement.getAttribute('data-day');
+          if (day !== draggedDay) {
+            setDropTarget(day);
+          }
+        } else {
+          setDropTarget(null);
+        }
+      };
+
+      const handleTouchEnd = (e) => {
+        if (draggedDay && dropTarget) {
+          handleDrop(dropTarget);
+        } else if (dragRef.current && !draggedDay) {
+          // Was a tap, not a drag - open modal
+          setSelectedDay(dragRef.current.day);
+        }
+        dragRef.current = null;
+        setDraggedDay(null);
+        setDropTarget(null);
+      };
+
+      // Handle day tap (for non-dragging clicks)
+      const handleDayClick = (day) => {
+        if (!draggedDay) {
+          setSelectedDay(day);
+        }
+      };
+
+      // Reset filters
+      const resetFilters = () => {
+        setFilters({
+          category: 'Dinner',
+          protein: 'All',
+          cookingStyle: 'All',
+          effort: 'All',
+          handsOnTime: 'All',
+          madeBefore: 'All',
+          familyFavorite: false,
+          season: 'All',
+          healthy: false,
+          leftovers: false,
+          pantryReady: false,
+          goodForCrowd: false,
+          freezerFriendly: false
+        });
+        setShowMoreFilters(false);
+      };
+
+      // Surprise me
+      const surpriseMe = () => {
+        if (filteredRecipes.length === 0) return;
+        const randomIndex = Math.floor(Math.random() * filteredRecipes.length);
+        addToWeek(filteredRecipes[randomIndex]);
+      };
+
+      const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
+        if (typeof value === 'boolean') return value;
+        return value !== 'All';
+      }).length;
+
+      return (
+        <div
+          className="min-h-screen bg-[#f9faf8]"
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Header */}
+          <header className="bg-white shadow-soft sticky top-0 z-40">
+            <div className="max-w-4xl mx-auto px-5 py-5">
+              <h1 className="text-2xl font-bold text-gray-800">
+                {getGreeting()}, Gia
+              </h1>
+            </div>
+          </header>
+
+          {/* Week Overview */}
+          <div className="bg-white border-b border-gray-100 shadow-soft">
+            <div className="max-w-4xl mx-auto px-5 py-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">This Week</h2>
+                <div className="flex items-center gap-4">
+                  {Object.keys(weekPlan).length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setShowGroceryList(true)}
+                        className="text-sage-600 hover:text-sage-700 text-xs font-semibold flex items-center gap-1"
+                      >
+                        🛒 Grocery List
+                      </button>
+                      <button
+                        onClick={() => setWeekPlan({})}
+                        className="text-red-400 hover:text-red-500 text-xs font-semibold"
+                      >
+                        Clear All
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {draggedDay && (
+                <div className="mb-3 text-xs text-sage-600 text-center font-medium">
+                  Drag to another day to move or swap
+                </div>
+              )}
+
+              <div className="flex overflow-x-auto hide-scrollbar rounded-2xl border border-gray-200 bg-white">
+                {DAYS.map((day, index) => {
+                  const dayPlan = weekPlan[day];
+                  const status = dayPlan?.status ? DAY_STATUSES.find(s => s.id === dayPlan.status) : null;
+                  const isDragging = draggedDay === day;
+                  const isDropTarget = dropTarget === day;
+                  const isFirst = index === 0;
+                  const isLast = index === DAYS.length - 1;
+
+                  return (
+                    <div
+                      key={day}
+                      data-day={day}
+                      draggable={!!dayPlan}
+                      onDragStart={(e) => handleDragStart(day, e)}
+                      onDragOver={(e) => handleDragOver(day, e)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={() => handleDrop(day)}
+                      onDragEnd={handleDragEnd}
+                      onTouchStart={(e) => handleTouchStart(day, e)}
+                      onClick={() => handleDayClick(day)}
+                      className={`flex-1 min-w-[72px] p-1.5 transition-all text-center cursor-pointer select-none
+                        ${!isLast ? 'border-r border-gray-100' : ''}
+                        ${isDragging ? 'dragging bg-sage-50' : 'hover:bg-sage-50/50'}
+                        ${isDropTarget ? 'drop-target' : ''}
+                      `}
+                    >
+                      <div className="text-[10px] font-semibold mb-1 text-gray-400 uppercase tracking-wide">
+                        {day.slice(0, 3)}
+                      </div>
+
+                      {dayPlan ? (
+                        <div className="min-h-[3rem]">
+                          {dayPlan.isLeftover ? (
+                            <div className="flex flex-col items-center justify-center">
+                              <span className="text-sm">🍲</span>
+                              <div className="text-[10px] text-sage-600 leading-tight line-clamp-2 font-medium">
+                                {dayPlan.leftoverShortName || dayPlan.leftoverMealName}
+                              </div>
+                            </div>
+                          ) : status ? (
+                            <div className={`py-1 flex flex-col items-center justify-center rounded-lg ${status.color}`}>
+                              <span className="text-sm">{status.icon}</span>
+                              <span className="text-[10px] font-medium">{status.label.split(' ')[0]}</span>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <div className="text-[11px] text-gray-700 leading-tight font-semibold line-clamp-2 mb-1">
+                                {getShortName(dayPlan.recipe)}
+                              </div>
+                              {dayPlan.side ? (
+                                <span className="text-sage-600 text-[9px] font-medium">+ {dayPlan.side}</span>
+                              ) : (
+                                <span className="text-gray-200 text-[10px]">+</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-12 rounded-lg flex items-center justify-center bg-gray-50/50">
+                          <span className="text-xl text-gray-200">+</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Week summary */}
+              {Object.keys(weekPlan).length > 0 && (
+                <div className="mt-4 text-sm text-gray-500 text-center">
+                  {Object.values(weekPlan).filter(p => p.recipe && !p.isLeftover).length} meals
+                  {Object.values(weekPlan).some(p => p.isLeftover) &&
+                    ` • ${Object.values(weekPlan).filter(p => p.isLeftover).length} leftover days`
+                  }
+                  {Object.values(weekPlan).some(p => p.status) &&
+                    ` • ${Object.values(weekPlan).filter(p => p.status).length} other`
+                  }
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Filters and Recipes */}
+          <div className="max-w-4xl mx-auto px-5 py-5">
+            <div className="flex items-center justify-between mb-5">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-soft hover:shadow-soft-md transition font-medium"
+              >
+                <span>🔍</span>
+                <span className="text-sm">Filters</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-5 h-5 bg-sage-500 text-white rounded-full text-xs flex items-center justify-center font-semibold">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={surpriseMe}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-full shadow-soft hover:border-sage-300 hover:text-sage-600 transition font-medium"
+              >
+                <span>✨</span>
+                <span className="text-sm">Surprise me</span>
+              </button>
+            </div>
+
+            {showFilters && (
+              <div className="card p-5 mb-5">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-semibold text-gray-800">Filter Recipes</h3>
+                  <button onClick={resetFilters} className="text-sm text-sage-600 hover:text-sage-700 font-semibold">
+                    Reset All
+                  </button>
+                </div>
+
+                {/* Row 1: Effort & Hands On Time */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Effort</label>
+                    <select
+                      value={filters.effort}
+                      onChange={(e) => setFilters({...filters, effort: e.target.value})}
+                      className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                    >
+                      {EFFORTS.map(e => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hands On Time</label>
+                    <select
+                      value={filters.handsOnTime}
+                      onChange={(e) => setFilters({...filters, handsOnTime: e.target.value})}
+                      className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                    >
+                      {HANDS_ON_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 2: Toggle buttons */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={() => setFilters({...filters, healthy: !filters.healthy})}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Healthy
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Leftovers
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, familyFavorite: !filters.familyFavorite})}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.familyFavorite ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    ⭐ Favorites
+                  </button>
+                </div>
+
+                {/* Row 3: Segmented control for Familiar/New/All */}
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Experience</label>
+                  <div className="inline-flex rounded-xl bg-gray-100 p-1">
+                    <button
+                      onClick={() => setFilters({...filters, madeBefore: 'Familiar'})}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                        filters.madeBefore === 'Familiar'
+                          ? 'bg-white text-gray-800 shadow-soft'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Familiar
+                    </button>
+                    <button
+                      onClick={() => setFilters({...filters, madeBefore: 'New'})}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                        filters.madeBefore === 'New'
+                          ? 'bg-white text-gray-800 shadow-soft'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      New
+                    </button>
+                    <button
+                      onClick={() => setFilters({...filters, madeBefore: 'All'})}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                        filters.madeBefore === 'All'
+                          ? 'bg-white text-gray-800 shadow-soft'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowMoreFilters(!showMoreFilters)}
+                  className={`w-full py-3 text-sm font-semibold rounded-xl transition ${
+                    hasActiveSecondaryFilters
+                      ? 'bg-sage-50 text-sage-600'
+                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  {showMoreFilters ? '− Less Filters' : '+ More Filters'}
+                  {hasActiveSecondaryFilters && !showMoreFilters && (
+                    <span className="ml-2 px-2 py-0.5 bg-sage-500 text-white rounded-full text-xs">
+                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.cookingStyle !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0) + (filters.pantryReady ? 1 : 0) + (filters.goodForCrowd ? 1 : 0) + (filters.freezerFriendly ? 1 : 0)}
+                    </span>
+                  )}
+                </button>
+
+                {showMoreFilters && (
+                  <div className="mt-5 pt-5 border-t border-gray-100">
+                    <div className="mb-4">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</label>
+                      <select
+                        value={filters.category}
+                        onChange={(e) => setFilters({...filters, category: e.target.value})}
+                        className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                      >
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Protein</label>
+                        <select
+                          value={filters.protein}
+                          onChange={(e) => setFilters({...filters, protein: e.target.value})}
+                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                        >
+                          {PROTEINS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Style</label>
+                        <select
+                          value={filters.cookingStyle}
+                          onChange={(e) => setFilters({...filters, cookingStyle: e.target.value})}
+                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                        >
+                          {COOKING_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Season</label>
+                        <select
+                          value={filters.season}
+                          onChange={(e) => setFilters({...filters, season: e.target.value})}
+                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                        >
+                          {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFilters({...filters, pantryReady: !filters.pantryReady})}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                          filters.pantryReady ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Pantry Ready
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, goodForCrowd: !filters.goodForCrowd})}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                          filters.goodForCrowd ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Good for Crowd
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, freezerFriendly: !filters.freezerFriendly})}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+                          filters.freezerFriendly ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Freezer Friendly
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="text-sm text-gray-500 mb-4 font-medium">
+              {filteredRecipes.length} recipe{filteredRecipes.length !== 1 ? 's' : ''} found
+            </div>
+
+            {/* Recipe Cards */}
+            <div className="space-y-4">
+              {filteredRecipes.map(recipe => (
+                <div key={recipe.id} className="card overflow-hidden transition hover:shadow-soft-md">
+                  <div className="flex cursor-pointer" onClick={() => setSelectedRecipe(recipe)}>
+                    <div className="w-28 h-28 flex-shrink-0">
+                      <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="flex-1 p-4">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-semibold text-gray-800 leading-tight pr-2 text-sm">
+                          {recipe.name}
+                        </h3>
+                        <div className="flex gap-0.5 flex-shrink-0">
+                          {recipe.familyFavorite && <span>⭐</span>}
+                          {recipe.healthy && <span>🥦</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className="px-2.5 py-1 bg-sage-100 text-sage-700 rounded-full text-xs font-semibold">
+                          {recipe.protein}
+                        </span>
+                        <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
+                          {recipe.cookingStyle}
+                        </span>
+                        <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                          {recipe.totalTime}
+                        </span>
+                      </div>
+
+                      {recipe.wingIt && recipe.quickMethod && (
+                        <div className="mt-2 p-2 bg-sage-50 rounded-xl text-xs text-sage-700 line-clamp-2">
+                          {recipe.quickMethod}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between bg-gray-50/50">
+                    {recipe.link ? (
+                      <a
+                        href={recipe.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-sage-600 hover:text-sage-700 font-semibold"
+                      >
+                        View Recipe →
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 font-medium">No recipe link</span>
+                    )}
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); addToWeek(recipe); }}
+                      className="px-4 py-2 btn-primary text-white rounded-full text-xs font-semibold"
+                    >
+                      + Add to Week
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredRecipes.length === 0 && (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">🍳</div>
+                <p className="text-gray-500 font-medium">No recipes match your filters</p>
+                <button onClick={resetFilters} className="mt-3 text-sage-600 text-sm hover:text-sage-700 font-semibold">
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="h-24"></div>
+
+          {/* Day Modal */}
+          {selectedDay && (
+            <DayModal
+              day={selectedDay}
+              dayPlan={weekPlan[selectedDay]}
+              onClose={() => setSelectedDay(null)}
+              onAddMeal={() => {
+                setSelectedDay(null);
+                window.scrollTo({ top: 400, behavior: 'smooth' });
+              }}
+              onSetStatus={(status) => setDayStatus(selectedDay, status)}
+              onRemove={() => clearDay(selectedDay)}
+              onViewRecipe={(recipe) => {
+                setSelectedDay(null);
+                setSelectedRecipe(recipe);
+              }}
+              onAddSide={(side) => addSideToDay(selectedDay, side)}
+              onRemoveSide={() => removeSideFromDay(selectedDay)}
+              allDays={DAYS}
+              weekPlan={weekPlan}
+            />
+          )}
+
+          {/* Recipe Detail Modal */}
+          {selectedRecipe && (
+            <RecipeDetailModal
+              recipe={selectedRecipe}
+              onClose={() => setSelectedRecipe(null)}
+            />
+          )}
+
+          {/* Grocery List Modal */}
+          {showGroceryList && (
+            <GroceryListModal
+              weekPlan={weekPlan}
+              onClose={() => setShowGroceryList(false)}
+              onCopied={() => setToast('Copied to clipboard!')}
+            />
+          )}
+
+          {/* Toast */}
+          {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<MealPlanner />, document.getElementById('root'));
+  </script>
+</body>
+</html>
