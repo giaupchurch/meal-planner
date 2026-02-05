@@ -3555,21 +3555,22 @@
                                 )}
                               </div>
 
-                      {/* View Recipe link at bottom right */}
-                      <div className="mt-auto pt-1 flex justify-end">
-                        {recipe.link ? (
-                          <a
-                            href={recipe.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-sage-600 hover:text-sage-700 font-semibold"
-                          >
-                            View Recipe →
-                          </a>
-                        ) : (
-                          <span className="text-xs text-gray-400 font-medium">No link</span>
-                        )}
+                              {/* View Recipe link at bottom right */}
+                              <div className="mt-auto pt-1 flex justify-end">
+                                {recipe.link ? (
+                                  <a
+                                    href={recipe.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs text-sage-600 hover:text-sage-700 font-semibold"
+                                  >
+                                    View Recipe →
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-gray-400 font-medium">No link</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
