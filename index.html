@@ -2669,30 +2669,54 @@
         Sunday: { status: 'na' }
       });
       /*
-       * FILTER & DISPLAY CONDITIONS:
+       * ============================================
+       * MEAL PLANNER - FILTER & DISPLAY CONDITIONS
+       * Last updated: February 5, 2026
+       * ============================================
        *
-       * ⚡ QUICK (button & total time pill):
-       * - Total time ≤ 35 minutes
-       * - Shows as green pill with ⚡ icon
+       * QUICK FILTER BUTTONS (top bar):
+       * --------------------------------
+       * 😎 EASY: Hands-on time ≤ 25 minutes
+       * ⚡ QUICK: Total time ≤ 35 minutes
        *
-       * 😎 EASY (button only):
-       * - Hands-on time ≤ 25 minutes
-       *
-       * 💪 HARD (icon only):
-       * - Hands-on time > 45 minutes
+       * RECIPE CARD ICONS (top-right of card):
+       * --------------------------------------
+       * 💪 Challenging: Hands-on time > 45 minutes
+       * ⭐ Favorite: familyFavorite === true
+       * 🥦 Healthy: healthy === true
+       * 🧩 Incomplete: incomplete === true
        *
        * TOTAL TIME PILL COLORS:
+       * -----------------------
        * - Green with ⚡: total time ≤ 35 min (quick)
        * - Red: total time > 1.25 hours (> 75 min)
        * - Gray: everything else
+       *
+       * HANDS-ON TIME PILL COLORS:
+       * --------------------------
+       * - Green: ≤ 30 min
+       * - Yellow: 31-59 min
+       * - Red: ≥ 60 min
+       *
+       * EXPERIENCE FILTER (in filter panel):
+       * ------------------------------------
+       * Single row: [All] [🔄 Tried] [✨ New] | [💗 Want to Try] [⭐ Favorites]
+       *
+       * LAYOUT:
+       * -------
+       * - Week planner: Presets, Surprise, Clear buttons
+       * - Search bar: Filter button (⚙️) on right with badge count
+       * - Quick filters: 😎 Easy, ⚡ Quick, ☑️ Select (browse only)
+       * - Filter panel: Hidden by default, shows Experience + Healthy/Leftovers + More Filters
+       * - Filter summary: Shows active filters as removable chips above recipe list
        */
       const [filters, setFilters] = useState({
         category: 'Dinner',
         protein: 'All',
         cookingStyle: 'All',
-        effort: 'All', // 💚 Easy button filters for 'Easy' only
+        effort: 'All', // 😎 Easy button filters for handsOnTime ≤ 25
         handsOnTime: 'All',
-        quickMeals: false, // ⚡ Quick = handsOn ≤20min AND total <60min
+        quickMeals: false, // ⚡ Quick = total time ≤ 35 min
         experience: 'All', // All, Made Before, New, Want to Try, Favorites
         season: 'All',
         healthy: false,
@@ -2814,7 +2838,7 @@
         });
       }, [filters, searchTerm, wantToTry]);
 
-      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.season !== 'All' || filters.pantryReady || filters.goodForCrowd || filters.freezerFriendly;
+      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.season !== 'All';
 
       // Find first available day
       const findFirstAvailableDay = () => {
@@ -3343,31 +3367,57 @@
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-2 mb-5 flex-wrap">
+            <div className="flex items-center justify-center gap-1.5 mb-5 flex-wrap">
               {/* Easy filter toggle */}
               <button
                 onClick={() => setFilters({...filters, effort: filters.effort === 'Easy' ? 'All' : 'Easy'})}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full shadow-soft transition font-medium ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full shadow-soft transition font-medium ${
                   filters.effort === 'Easy'
                     ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-white border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-600'
                 }`}
               >
-                <span className="text-sm">😎</span>
-                <span className="text-sm">Easy</span>
+                <span className="text-xs">😎</span>
+                <span className="text-xs">Easy</span>
               </button>
 
-              {/* Quick filter toggle - handsOn ≤20min AND total <60min */}
+              {/* Quick filter toggle - total time ≤35 min */}
               <button
                 onClick={() => setFilters({...filters, quickMeals: !filters.quickMeals})}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full shadow-soft transition font-medium ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-soft transition font-medium ${
                   filters.quickMeals
                     ? 'bg-yellow-500 text-white hover:bg-yellow-600'
                     : 'bg-white border border-gray-200 text-gray-600 hover:border-yellow-400 hover:text-yellow-600'
                 }`}
               >
-                <span className="text-sm">⚡</span>
-                <span className="text-sm">Quick</span>
+                <span className="text-xs">⚡</span>
+                <span className="text-xs">Quick</span>
+              </button>
+
+              {/* Healthy filter toggle */}
+              <button
+                onClick={() => setFilters({...filters, healthy: !filters.healthy})}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-soft transition font-medium ${
+                  filters.healthy
+                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-emerald-400 hover:text-emerald-600'
+                }`}
+              >
+                <span className="text-xs">🥦</span>
+                <span className="text-xs">Healthy</span>
+              </button>
+
+              {/* Leftovers filter toggle */}
+              <button
+                onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-soft transition font-medium ${
+                  filters.leftovers
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-600'
+                }`}
+              >
+                <span className="text-xs">🍲</span>
+                <span className="text-xs">Leftovr</span>
               </button>
 
               {/* Select Mode Toggle - Browse page only */}
@@ -3440,94 +3490,104 @@
                   ✕
                 </button>
                 <div className="flex items-center justify-between mb-5 pr-10">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800">Filter Recipes</h3>
-                    {activeFilterCount > 0 && (
-                      <span className="px-2 py-0.5 bg-sage-500 text-white text-xs font-semibold rounded-full">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="font-semibold text-gray-800">Filter Recipes</h3>
                   <button onClick={resetFilters} className="text-sm text-sage-600 hover:text-sage-700 font-semibold">
                     Reset All
                   </button>
                 </div>
 
-                {/* Experience - compact single row */}
-                <div className="mb-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Experience</label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setFilters({...filters, experience: 'All'})}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-semibold transition ${
-                        filters.experience === 'All' || filters.experience === 'Want to Try' || filters.experience === 'Favorites'
-                          ? 'bg-sage-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setFilters({...filters, experience: 'Made Before'})}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-semibold transition ${
-                        filters.experience === 'Made Before'
-                          ? 'bg-sage-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      🔄
-                    </button>
-                    <button
-                      onClick={() => setFilters({...filters, experience: 'New'})}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-semibold transition ${
-                        filters.experience === 'New'
-                          ? 'bg-sage-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      ✨
-                    </button>
-                    <span className="text-gray-300 mx-1">|</span>
-                    <button
-                      onClick={() => setFilters({...filters, experience: filters.experience === 'Want to Try' ? 'All' : 'Want to Try'})}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-semibold transition ${
-                        filters.experience === 'Want to Try'
-                          ? 'bg-pink-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      💗
-                    </button>
-                    <button
-                      onClick={() => setFilters({...filters, experience: filters.experience === 'Favorites' ? 'All' : 'Favorites'})}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-semibold transition ${
-                        filters.experience === 'Favorites'
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      ⭐
-                    </button>
+                {/* Experience - Two Groups (Option 2) */}
+                <div className="space-y-3 mb-5">
+                  {/* Familiarity row */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Familiarity</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFilters({...filters, experience: 'All'})}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
+                          filters.experience === 'All'
+                            ? 'bg-sage-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, experience: 'Made Before'})}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
+                          filters.experience === 'Made Before'
+                            ? 'bg-sage-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        🔄 Tried
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, experience: 'New'})}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
+                          filters.experience === 'New'
+                            ? 'bg-sage-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        ✨ New
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bookmarks row */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Bookmarks</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFilters({...filters, experience: filters.experience === 'Want to Try' ? 'All' : 'Want to Try'})}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
+                          filters.experience === 'Want to Try'
+                            ? 'bg-pink-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        💗 Want to Try
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, experience: filters.experience === 'Favorites' ? 'All' : 'Favorites'})}
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
+                          filters.experience === 'Favorites'
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        ⭐ Favorites
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Toggle buttons */}
+                {/* Special filters - Pantry, Crowd, Freezer */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   <button
-                    onClick={() => setFilters({...filters, healthy: !filters.healthy})}
+                    onClick={() => setFilters({...filters, pantryReady: !filters.pantryReady})}
                     className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
-                      filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      filters.pantryReady ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    🥦 Healthy
+                    🥫 Pantry Ready
                   </button>
                   <button
-                    onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
+                    onClick={() => setFilters({...filters, goodForCrowd: !filters.goodForCrowd})}
                     className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
-                      filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      filters.goodForCrowd ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    🍲 Leftovers
+                    👥 Crowd
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, freezerFriendly: !filters.freezerFriendly})}
+                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.freezerFriendly ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    🧊 Freezer
                   </button>
                 </div>
 
@@ -3542,7 +3602,7 @@
                   {showMoreFilters ? '− Less Filters' : '+ More Filters'}
                   {hasActiveSecondaryFilters && !showMoreFilters && (
                     <span className="ml-2 px-2 py-0.5 bg-sage-500 text-white rounded-full text-xs">
-                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0) + (filters.pantryReady ? 1 : 0) + (filters.goodForCrowd ? 1 : 0) + (filters.freezerFriendly ? 1 : 0)}
+                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0)}
                     </span>
                   )}
                 </button>
@@ -3562,7 +3622,7 @@
                       </select>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Protein</label>
                         <select
@@ -3589,35 +3649,16 @@
                         </select>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setFilters({...filters, pantryReady: !filters.pantryReady})}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                          filters.pantryReady ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Pantry Ready
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, goodForCrowd: !filters.goodForCrowd})}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                          filters.goodForCrowd ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Good for Crowd
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, freezerFriendly: !filters.freezerFriendly})}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                          filters.freezerFriendly ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Freezer Friendly
-                      </button>
-                    </div>
                   </div>
                 )}
+
+                {/* Done button */}
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="w-full mt-5 py-3 bg-sage-500 hover:bg-sage-600 text-white text-sm font-semibold rounded-xl transition"
+                >
+                  Done
+                </button>
               </div>
             )}
 
@@ -3653,9 +3694,9 @@
               if (filters.category !== 'Dinner') activeFiltersList.push({ key: 'category', label: filters.category, clear: () => setFilters({...filters, category: 'Dinner'}) });
               if (filters.protein !== 'All') activeFiltersList.push({ key: 'protein', label: filters.protein, clear: () => setFilters({...filters, protein: 'All'}) });
               if (filters.season !== 'All') activeFiltersList.push({ key: 'season', label: filters.season, clear: () => setFilters({...filters, season: 'All'}) });
-              if (filters.pantryReady) activeFiltersList.push({ key: 'pantryReady', label: 'Pantry Ready', clear: () => setFilters({...filters, pantryReady: false}) });
-              if (filters.goodForCrowd) activeFiltersList.push({ key: 'goodForCrowd', label: 'Good for Crowd', clear: () => setFilters({...filters, goodForCrowd: false}) });
-              if (filters.freezerFriendly) activeFiltersList.push({ key: 'freezerFriendly', label: 'Freezer Friendly', clear: () => setFilters({...filters, freezerFriendly: false}) });
+              if (filters.pantryReady) activeFiltersList.push({ key: 'pantryReady', label: '🥫 Pantry', clear: () => setFilters({...filters, pantryReady: false}) });
+              if (filters.goodForCrowd) activeFiltersList.push({ key: 'goodForCrowd', label: '👥 Crowd', clear: () => setFilters({...filters, goodForCrowd: false}) });
+              if (filters.freezerFriendly) activeFiltersList.push({ key: 'freezerFriendly', label: '🧊 Freezer', clear: () => setFilters({...filters, freezerFriendly: false}) });
 
               return (
                 <>
