@@ -2641,19 +2641,19 @@
       ];
 
       return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 z-50 pb-safe">
-          <div className="max-w-4xl mx-auto flex justify-around py-2">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 z-40 pb-safe">
+          <div className="max-w-4xl mx-auto flex justify-around py-1">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setCurrentPage(tab.id)}
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                   currentPage === tab.id
                     ? 'bg-sage-100 text-sage-700 shadow-soft scale-105'
                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <span className="text-2xl">{tab.icon}</span>
+                <span className="text-lg">{tab.icon}</span>
               </button>
             ))}
           </div>
@@ -2668,12 +2668,29 @@
         Saturday: { status: 'na' },
         Sunday: { status: 'na' }
       });
+      /*
+       * FILTER & DISPLAY CONDITIONS:
+       *
+       * ⚡ QUICK (button & icon):
+       * - Total time ≤ 35 minutes
+       *
+       * 💚 EASY (button & icon):
+       * - Hands-on time ≤ 25 minutes
+       *
+       * 💪 HARD (icon only):
+       * - Hands-on time > 45 minutes
+       *
+       * TOTAL TIME PILL COLOR:
+       * - Red: total time > 1.25 hours (> 75 min)
+       * - Gray: total time ≤ 1.25 hours
+       */
       const [filters, setFilters] = useState({
         category: 'Dinner',
         protein: 'All',
         cookingStyle: 'All',
-        effort: 'All',
+        effort: 'All', // 💚 Easy button filters for 'Easy' only
         handsOnTime: 'All',
+        quickMeals: false, // ⚡ Quick = handsOn ≤20min AND total <60min
         experience: 'All', // All, Made Before, New, Want to Try, Favorites
         season: 'All',
         healthy: false,
@@ -2756,13 +2773,29 @@
           if (filters.category !== 'All' && recipe.category !== filters.category) return false;
           if (filters.protein !== 'All' && recipe.protein !== filters.protein) return false;
           if (filters.cookingStyle !== 'All' && recipe.cookingStyle !== filters.cookingStyle) return false;
-          if (filters.effort !== 'All' && recipe.effort !== filters.effort) return false;
+          // Easy filter: hands-on time ≤ 25 min
+          if (filters.effort === 'Easy' && recipe.handsOnTime > 25) return false;
           if (filters.handsOnTime !== 'All') {
             const time = recipe.handsOnTime;
             if (filters.handsOnTime === '20 min or less' && time > 20) return false;
             if (filters.handsOnTime === '30 min or less' && time > 30) return false;
             if (filters.handsOnTime === '45 min or less' && time > 45) return false;
             if (filters.handsOnTime === '1 hour or more' && time < 60) return false;
+          }
+          // Quick meals filter: ⚡ total time ≤35 min
+          if (filters.quickMeals) {
+            // Parse total time string (e.g., "45 min", "1 hr 15 min", "90 min")
+            const parseTotalTime = (str) => {
+              if (!str) return 999;
+              let mins = 0;
+              const hrMatch = str.match(/(\d+)\s*hr/);
+              const minMatch = str.match(/(\d+)\s*min/);
+              if (hrMatch) mins += parseInt(hrMatch[1]) * 60;
+              if (minMatch) mins += parseInt(minMatch[1]);
+              return mins;
+            };
+            const totalMins = parseTotalTime(recipe.totalTime);
+            if (totalMins > 35) return false;
           }
           // Experience filter: All, Made Before, New, Want to Try, Favorites
           if (filters.experience === 'Made Before' && !recipe.madeBefore) return false;
@@ -3132,8 +3165,8 @@
         >
           {/* Header */}
           <header className="bg-white shadow-soft sticky top-0 z-40">
-            <div className="max-w-4xl mx-auto px-5 py-5">
-              <h1 className="text-2xl font-bold text-gray-800">
+            <div className="max-w-4xl mx-auto px-5 py-3">
+              <h1 className="text-xl font-bold text-gray-800">
                 {getGreeting()}, Gia
               </h1>
             </div>
@@ -3142,8 +3175,8 @@
           {/* Week Overview - only on Plan page */}
           {currentPage === 'plan' && (
           <div className="bg-white border-b border-gray-100 shadow-soft">
-            <div className="max-w-4xl mx-auto px-5 py-5">
-              <div className="flex items-center justify-between mb-4">
+            <div className="max-w-4xl mx-auto px-5 py-3">
+              <div className="flex items-center justify-between mb-2">
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">This Week</h2>
                 <div className="flex items-center gap-4">
                   {Object.keys(weekPlan).length > 0 && (
@@ -3243,7 +3276,7 @@
 
               {/* Week summary */}
               {Object.keys(weekPlan).length > 0 && (
-                <div className="mt-4 text-sm text-gray-500 text-center">
+                <div className="mt-2 text-sm text-gray-500 text-center">
                   {Object.values(weekPlan).filter(p => p.recipe && !p.isLeftover).length} cooking days
                   {Object.values(weekPlan).some(p => p.isLeftover) &&
                     ` • ${Object.values(weekPlan).filter(p => p.isLeftover).length} leftover days`
@@ -3304,6 +3337,32 @@
               >
                 <span className="text-sm">✨</span>
                 <span className="text-sm">Surprise</span>
+              </button>
+
+              {/* Easy filter toggle */}
+              <button
+                onClick={() => setFilters({...filters, effort: filters.effort === 'Easy' ? 'All' : 'Easy'})}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full shadow-soft transition font-medium ${
+                  filters.effort === 'Easy'
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-600'
+                }`}
+              >
+                <span className="text-sm">💚</span>
+                <span className="text-sm">Easy</span>
+              </button>
+
+              {/* Quick filter toggle - handsOn ≤20min AND total <60min */}
+              <button
+                onClick={() => setFilters({...filters, quickMeals: !filters.quickMeals})}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full shadow-soft transition font-medium ${
+                  filters.quickMeals
+                    ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-yellow-400 hover:text-yellow-600'
+                }`}
+              >
+                <span className="text-sm">⚡</span>
+                <span className="text-sm">Quick</span>
               </button>
 
               {/* Select Mode Toggle - Browse page only */}
@@ -3389,36 +3448,7 @@
                   </button>
                 </div>
 
-                {/* Row 1: Effort & Hands On Time */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Effort</label>
-                    <select
-                      value={filters.effort}
-                      onChange={(e) => setFilters({...filters, effort: e.target.value})}
-                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                        filters.effort !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                      }`}
-                    >
-                      {EFFORTS.map(e => <option key={e} value={e}>{e}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hands On Time</label>
-                    <select
-                      value={filters.handsOnTime}
-                      onChange={(e) => setFilters({...filters, handsOnTime: e.target.value})}
-                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                        filters.handsOnTime !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                      }`}
-                    >
-                      {HANDS_ON_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Row 2: Experience dropdown + Toggle buttons */}
+                {/* Row 1: Experience & Hands On Time */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Experience</label>
@@ -3436,26 +3466,38 @@
                       <option value="Favorites">⭐ Favorites</option>
                     </select>
                   </div>
-                  <div className="flex flex-col justify-end gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setFilters({...filters, healthy: !filters.healthy})}
-                        className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
-                          filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        🥦 Healthy
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
-                        className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
-                          filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        🍲 Leftovers
-                      </button>
-                    </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Hands On Time</label>
+                    <select
+                      value={filters.handsOnTime}
+                      onChange={(e) => setFilters({...filters, handsOnTime: e.target.value})}
+                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                        filters.handsOnTime !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                      }`}
+                    >
+                      {HANDS_ON_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
+                </div>
+
+                {/* Toggle buttons */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={() => setFilters({...filters, healthy: !filters.healthy})}
+                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    🥦 Healthy
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
+                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                      filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    🍲 Leftovers
+                  </button>
                 </div>
 
                 <button
@@ -3664,6 +3706,22 @@
                                   {recipe.name}
                                 </h3>
                                 <div className="flex gap-1 flex-shrink-0 items-center">
+                                  {/* Quick: ≤20min hands-on AND <60min total */}
+                                  {(() => {
+                                    const parseTotalTime = (str) => {
+                                      if (!str) return 999;
+                                      let mins = 0;
+                                      const hrMatch = str.match(/(\d+)\s*hr/);
+                                      const minMatch = str.match(/(\d+)\s*min/);
+                                      if (hrMatch) mins += parseInt(hrMatch[1]) * 60;
+                                      if (minMatch) mins += parseInt(minMatch[1]);
+                                      return mins;
+                                    };
+                                    const isQuick = parseTotalTime(recipe.totalTime) <= 35;
+                                    return isQuick ? <span title="Quick (≤35min total)">⚡</span> : null;
+                                  })()}
+                                  {recipe.handsOnTime <= 25 && <span title="Easy (≤25min hands-on)">💚</span>}
+                                  {recipe.handsOnTime > 45 && <span title="Challenging (>45min hands-on)">💪</span>}
                                   {recipe.familyFavorite && <span>⭐</span>}
                                   {recipe.healthy && <span>🥦</span>}
                                   {recipe.incomplete && <span title="Not a complete meal">🧩</span>}
@@ -3674,9 +3732,24 @@
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getHandsOnColor(recipe.handsOnTime)}`}>
                                   🔪 {recipe.handsOnTime}m
                                 </span>
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                                  ⏱ {recipe.totalTime}
-                                </span>
+                                {(() => {
+                                  const parseTotalTime = (str) => {
+                                    if (!str) return 0;
+                                    let mins = 0;
+                                    const hrMatch = str.match(/(\d+)\s*hr/);
+                                    const minMatch = str.match(/(\d+)\s*min/);
+                                    if (hrMatch) mins += parseInt(hrMatch[1]) * 60;
+                                    if (minMatch) mins += parseInt(minMatch[1]);
+                                    return mins;
+                                  };
+                                  const totalMins = parseTotalTime(recipe.totalTime);
+                                  const isLong = totalMins > 75; // > 1.25 hours
+                                  return (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${isLong ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                                      ⏱ {recipe.totalTime}
+                                    </span>
+                                  );
+                                })()}
                                 {(recipe.cookingStyle === 'One Pot' || recipe.cookingStyle === 'Sheet Pan') && (
                                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
                                     {recipe.cookingStyle}
