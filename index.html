@@ -1988,13 +1988,13 @@
       return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={onClose}>
           <div
-            className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto shadow-soft-lg relative"
+            className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-24 max-h-[85vh] overflow-y-auto shadow-soft-lg relative"
             onClick={e => e.stopPropagation()}
           >
-            {/* Close button */}
+            {/* Close button - larger for easy tapping */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 transition"
+              className="absolute top-3 right-3 w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-600 transition text-lg font-medium"
             >
               ✕
             </button>
@@ -2636,7 +2636,7 @@
     function BottomNav({ currentPage, setCurrentPage }) {
       const tabs = [
         { id: 'plan', icon: '📅' },
-        { id: 'browse', icon: '📖' },
+        { id: 'browse', icon: '🔍' },
         { id: 'grocery', icon: '🛒' }
       ];
 
@@ -2674,8 +2674,7 @@
         cookingStyle: 'All',
         effort: 'All',
         handsOnTime: 'All',
-        madeBefore: 'All',
-        familyFavorite: false,
+        experience: 'All', // All, Made Before, New, Want to Try, Favorites
         season: 'All',
         healthy: false,
         leftovers: false,
@@ -2683,7 +2682,7 @@
         goodForCrowd: false,
         freezerFriendly: false
       });
-      const [showFilters, setShowFilters] = useState(true);
+      const [showFilters, setShowFilters] = useState(false);
       const [showMoreFilters, setShowMoreFilters] = useState(false);
       const [selectedDay, setSelectedDay] = useState(null);
       const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -2765,9 +2764,11 @@
             if (filters.handsOnTime === '45 min or less' && time > 45) return false;
             if (filters.handsOnTime === '1 hour or more' && time < 60) return false;
           }
-          if (filters.madeBefore === 'Familiar' && !recipe.madeBefore) return false;
-          if (filters.madeBefore === 'New' && recipe.madeBefore) return false;
-          if (filters.familyFavorite && !recipe.familyFavorite) return false;
+          // Experience filter: All, Made Before, New, Want to Try, Favorites
+          if (filters.experience === 'Made Before' && !recipe.madeBefore) return false;
+          if (filters.experience === 'New' && recipe.madeBefore) return false;
+          if (filters.experience === 'Want to Try' && !wantToTry.has(recipe.id)) return false;
+          if (filters.experience === 'Favorites' && !recipe.familyFavorite) return false;
           if (filters.season !== 'All' && recipe.season !== filters.season && recipe.season !== 'Anytime') return false;
           if (filters.healthy && !recipe.healthy) return false;
           if (filters.leftovers && !recipe.leftovers) return false;
@@ -2776,9 +2777,9 @@
           if (filters.freezerFriendly && !recipe.freezerFriendly) return false;
           return true;
         });
-      }, [filters, searchTerm]);
+      }, [filters, searchTerm, wantToTry]);
 
-      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.cookingStyle !== 'All' || filters.season !== 'All' || filters.pantryReady || filters.goodForCrowd || filters.freezerFriendly;
+      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.season !== 'All' || filters.pantryReady || filters.goodForCrowd || filters.freezerFriendly;
 
       // Find first available day
       const findFirstAvailableDay = () => {
@@ -3329,20 +3330,6 @@
                 </button>
               )}
 
-              {/* Want to Try Filter */}
-              {wantToTry.size > 0 && (
-                <button
-                  onClick={() => setShowWantToTryOnly(!showWantToTryOnly)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full shadow-soft transition font-medium ${
-                    showWantToTryOnly
-                      ? 'bg-pink-500 text-white hover:bg-pink-600'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
-                  }`}
-                >
-                  <span className="text-sm">💗</span>
-                  <span className="text-sm">Want to Try ({wantToTry.size})</span>
-                </button>
-              )}
             </div>
 
             {/* Select Mode Bar - Browse page only */}
@@ -3380,8 +3367,15 @@
             )}
 
             {showFilters && (
-              <div className="card p-5 mb-5">
-                <div className="flex items-center justify-between mb-5">
+              <div className="card p-5 mb-5 relative">
+                {/* Close button */}
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="absolute top-3 right-3 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 transition"
+                >
+                  ✕
+                </button>
+                <div className="flex items-center justify-between mb-5 pr-10">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-800">Filter Recipes</h3>
                     {activeFilterCount > 0 && (
@@ -3424,68 +3418,43 @@
                   </div>
                 </div>
 
-                {/* Row 2: Toggle buttons */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button
-                    onClick={() => setFilters({...filters, healthy: !filters.healthy})}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                      filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    Healthy
-                  </button>
-                  <button
-                    onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                      filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    Leftovers
-                  </button>
-                  <button
-                    onClick={() => setFilters({...filters, familyFavorite: !filters.familyFavorite})}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
-                      filters.familyFavorite ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    ⭐ Favorites
-                  </button>
-                </div>
-
-                {/* Row 3: Segmented control for Familiar/New/All */}
-                <div className="mb-4">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Experience</label>
-                  <div className="inline-flex rounded-xl bg-gray-100 p-1">
-                    <button
-                      onClick={() => setFilters({...filters, madeBefore: 'Familiar'})}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                        filters.madeBefore === 'Familiar'
-                          ? 'bg-white text-gray-800 shadow-soft'
-                          : 'text-gray-500 hover:text-gray-700'
+                {/* Row 2: Experience dropdown + Toggle buttons */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Experience</label>
+                    <select
+                      value={filters.experience}
+                      onChange={(e) => setFilters({...filters, experience: e.target.value})}
+                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                        filters.experience !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
                       }`}
                     >
-                      Familiar
-                    </button>
-                    <button
-                      onClick={() => setFilters({...filters, madeBefore: 'New'})}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                        filters.madeBefore === 'New'
-                          ? 'bg-white text-gray-800 shadow-soft'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      New
-                    </button>
-                    <button
-                      onClick={() => setFilters({...filters, madeBefore: 'All'})}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                        filters.madeBefore === 'All'
-                          ? 'bg-white text-gray-800 shadow-soft'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      All
-                    </button>
+                      <option value="All">All</option>
+                      <option value="Made Before">Made Before</option>
+                      <option value="New">New</option>
+                      <option value="Want to Try">💗 Want to Try</option>
+                      <option value="Favorites">⭐ Favorites</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col justify-end gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFilters({...filters, healthy: !filters.healthy})}
+                        className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                          filters.healthy ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        🥦 Healthy
+                      </button>
+                      <button
+                        onClick={() => setFilters({...filters, leftovers: !filters.leftovers})}
+                        className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                          filters.leftovers ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        🍲 Leftovers
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -3500,7 +3469,7 @@
                   {showMoreFilters ? '− Less Filters' : '+ More Filters'}
                   {hasActiveSecondaryFilters && !showMoreFilters && (
                     <span className="ml-2 px-2 py-0.5 bg-sage-500 text-white rounded-full text-xs">
-                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.cookingStyle !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0) + (filters.pantryReady ? 1 : 0) + (filters.goodForCrowd ? 1 : 0) + (filters.freezerFriendly ? 1 : 0)}
+                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0) + (filters.pantryReady ? 1 : 0) + (filters.goodForCrowd ? 1 : 0) + (filters.freezerFriendly ? 1 : 0)}
                     </span>
                   )}
                 </button>
@@ -3535,19 +3504,6 @@
                       </div>
 
                       <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Style</label>
-                        <select
-                          value={filters.cookingStyle}
-                          onChange={(e) => setFilters({...filters, cookingStyle: e.target.value})}
-                          className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                            filters.cookingStyle !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                          }`}
-                        >
-                          {COOKING_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-
-                      <div className="col-span-2">
                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Season</label>
                         <select
                           value={filters.season}
@@ -3715,11 +3671,11 @@
                               </div>
 
                               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
-                                  ⏱ {recipe.totalTime}
-                                </span>
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getHandsOnColor(recipe.handsOnTime)}`}>
                                   🔪 {recipe.handsOnTime}m
+                                </span>
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                  ⏱ {recipe.totalTime}
                                 </span>
                                 {(recipe.cookingStyle === 'One Pot' || recipe.cookingStyle === 'Sheet Pan') && (
                                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
