@@ -1988,9 +1988,16 @@
       return (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={onClose}>
           <div
-            className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto shadow-soft-lg"
+            className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-8 max-h-[85vh] overflow-y-auto shadow-soft-lg relative"
             onClick={e => e.stopPropagation()}
           >
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 transition"
+            >
+              ✕
+            </button>
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
             <h3 className="text-xl font-bold text-gray-800 mb-1">{day}</h3>
 
@@ -2124,12 +2131,6 @@
               </>
             )}
 
-            <button
-              onClick={onClose}
-              className="w-full py-3 mt-4 text-gray-400 font-medium"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       );
@@ -2634,28 +2635,25 @@
     // Bottom Navigation Component
     function BottomNav({ currentPage, setCurrentPage }) {
       const tabs = [
-        { id: 'plan', label: 'Plan', icon: '📅' },
-        { id: 'browse', label: 'Browse', icon: '🍳' },
-        { id: 'grocery', label: 'Grocery', icon: '🛒' }
+        { id: 'plan', icon: '📅' },
+        { id: 'browse', icon: '📖' },
+        { id: 'grocery', icon: '🛒' }
       ];
 
       return (
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe">
-          <div className="max-w-4xl mx-auto flex">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 z-50 pb-safe">
+          <div className="max-w-4xl mx-auto flex justify-around py-2">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setCurrentPage(tab.id)}
-                className={`flex-1 py-3 flex flex-col items-center gap-1 transition ${
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                   currentPage === tab.id
-                    ? 'text-sage-600'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'bg-sage-100 text-sage-700 shadow-soft scale-105'
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <span className="text-xl">{tab.icon}</span>
-                <span className={`text-xs font-medium ${currentPage === tab.id ? 'font-semibold' : ''}`}>
-                  {tab.label}
-                </span>
+                <span className="text-2xl">{tab.icon}</span>
               </button>
             ))}
           </div>
@@ -3404,7 +3402,9 @@
                     <select
                       value={filters.effort}
                       onChange={(e) => setFilters({...filters, effort: e.target.value})}
-                      className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                        filters.effort !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                      }`}
                     >
                       {EFFORTS.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
@@ -3415,7 +3415,9 @@
                     <select
                       value={filters.handsOnTime}
                       onChange={(e) => setFilters({...filters, handsOnTime: e.target.value})}
-                      className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                      className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                        filters.handsOnTime !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                      }`}
                     >
                       {HANDS_ON_TIMES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
@@ -3510,7 +3512,9 @@
                       <select
                         value={filters.category}
                         onChange={(e) => setFilters({...filters, category: e.target.value})}
-                        className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                        className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                          filters.category !== 'Dinner' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                        }`}
                       >
                         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -3522,7 +3526,9 @@
                         <select
                           value={filters.protein}
                           onChange={(e) => setFilters({...filters, protein: e.target.value})}
-                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                          className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                            filters.protein !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                          }`}
                         >
                           {PROTEINS.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
@@ -3533,7 +3539,9 @@
                         <select
                           value={filters.cookingStyle}
                           onChange={(e) => setFilters({...filters, cookingStyle: e.target.value})}
-                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                          className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                            filters.cookingStyle !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                          }`}
                         >
                           {COOKING_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -3544,7 +3552,9 @@
                         <select
                           value={filters.season}
                           onChange={(e) => setFilters({...filters, season: e.target.value})}
-                          className="mt-1.5 w-full p-3 border-none rounded-xl text-sm bg-gray-50 font-medium focus:ring-2 focus:ring-sage-300 outline-none"
+                          className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                            filters.season !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                          }`}
                         >
                           {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -3626,6 +3636,13 @@
                         setSelectedRecipes(newSelected);
                       };
 
+                      // Color for hands-on time
+                      const getHandsOnColor = (mins) => {
+                        if (mins <= 30) return 'bg-green-50 text-green-700';
+                        if (mins < 60) return 'bg-yellow-50 text-yellow-700';
+                        return 'bg-red-50 text-red-700';
+                      };
+
                       return (
                         <div
                           key={recipe.id}
@@ -3633,7 +3650,7 @@
                             selectMode && isSelected ? 'ring-2 ring-blue-400 bg-blue-50/30' : ''
                           }`}
                         >
-                          <div className="flex h-28">
+                          <div className="flex h-32">
                             {/* Select mode checkbox */}
                             {selectMode && (
                               <div
@@ -3651,7 +3668,7 @@
                             )}
 
                             {/* Image with Add to Week button overlay */}
-                            <div className={`${selectMode ? 'w-24' : 'w-28'} h-28 flex-shrink-0 relative`}>
+                            <div className={`${selectMode ? 'w-28' : 'w-32'} h-32 flex-shrink-0 relative`}>
                               <img
                                 src={recipe.image}
                                 alt={recipe.name}
@@ -3670,7 +3687,8 @@
                               >
                                 {isWantToTry ? '♥' : '♡'}
                               </button>
-                              {!selectMode && (
+                              {/* Add button - only on Plan page */}
+                              {!selectMode && currentPage === 'plan' && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); addToWeek(recipe); }}
                                   className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-white/90 text-sage-700 rounded-full text-xs font-semibold shadow-sm hover:bg-white whitespace-nowrap"
@@ -3690,11 +3708,6 @@
                                   {recipe.name}
                                 </h3>
                                 <div className="flex gap-1 flex-shrink-0 items-center">
-                                  {recipe.leftovers && (
-                                    <span className="px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded text-[10px] font-medium">
-                                      Leftovers
-                                    </span>
-                                  )}
                                   {recipe.familyFavorite && <span>⭐</span>}
                                   {recipe.healthy && <span>🥦</span>}
                                   {recipe.incomplete && <span title="Not a complete meal">🧩</span>}
@@ -3705,12 +3718,17 @@
                                 <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                                   ⏱ {recipe.totalTime}
                                 </span>
-                                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getHandsOnColor(recipe.handsOnTime)}`}>
                                   🔪 {recipe.handsOnTime}m
                                 </span>
                                 {(recipe.cookingStyle === 'One Pot' || recipe.cookingStyle === 'Sheet Pan') && (
                                   <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-semibold">
                                     {recipe.cookingStyle}
+                                  </span>
+                                )}
+                                {recipe.leftovers && (
+                                  <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded-full text-xs font-semibold">
+                                    Leftovers
                                   </span>
                                 )}
                               </div>
