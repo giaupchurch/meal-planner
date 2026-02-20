@@ -4780,7 +4780,7 @@
         });
       }, [filters, searchTerm, wantToTry]);
 
-      const hasActiveSecondaryFilters = filters.category !== 'Dinner' || filters.protein !== 'All' || filters.season !== 'All';
+      const hasActiveSecondaryFilters = filters.category !== 'All' || filters.protein !== 'All' || filters.season !== 'All';
 
       // Find first available day
       const findFirstAvailableDay = () => {
@@ -5222,7 +5222,7 @@
                       </div>
 
                       {dayPlan ? (
-                        <div className="min-h-[3rem]">
+                        <div className="min-h-[3.5rem]">
                           {dayPlan.isLeftover ? (
                             <div className="flex flex-col items-center justify-center">
                               <div className="text-[9px] text-gray-700 leading-tight font-semibold">
@@ -5448,7 +5448,7 @@
                         onClick={() => setFilters({...filters, experience: 'All'})}
                         className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
                           filters.experience === 'All'
-                            ? 'bg-sage-500 text-white'
+                            ? 'bg-gray-300 text-gray-700'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -5544,7 +5544,7 @@
                   {showMoreFilters ? '− Less Filters' : '+ More Filters'}
                   {hasActiveSecondaryFilters && !showMoreFilters && (
                     <span className="ml-2 px-2 py-0.5 bg-sage-500 text-white rounded-full text-xs">
-                      {(filters.category !== 'Dinner' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0)}
+                      {(filters.category !== 'All' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0)}
                     </span>
                   )}
                 </button>
@@ -5557,7 +5557,7 @@
                         value={filters.category}
                         onChange={(e) => setFilters({...filters, category: e.target.value})}
                         className={`mt-1.5 w-full p-3 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                          filters.category !== 'Dinner' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
+                          filters.category !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
                         }`}
                       >
                         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -5648,7 +5648,7 @@
               if (filters.experience === 'New') activeFiltersList.push({ key: 'experience', label: '✨ New', clear: () => setFilters({...filters, experience: 'All'}) });
               if (filters.experience === 'Want to Try') activeFiltersList.push({ key: 'experience', label: '💗 Want to Try', clear: () => setFilters({...filters, experience: 'All'}) });
               if (filters.experience === 'Favorites') activeFiltersList.push({ key: 'experience', label: '⭐ Favorites', clear: () => setFilters({...filters, experience: 'All'}) });
-              if (filters.category !== 'Dinner') activeFiltersList.push({ key: 'category', label: filters.category, clear: () => setFilters({...filters, category: 'Dinner'}) });
+              if (filters.category !== 'All') activeFiltersList.push({ key: 'category', label: filters.category, clear: () => setFilters({...filters, category: 'All'}) });
               if (filters.protein !== 'All') activeFiltersList.push({ key: 'protein', label: filters.protein, clear: () => setFilters({...filters, protein: 'All'}) });
               if (filters.season !== 'All') activeFiltersList.push({ key: 'season', label: filters.season, clear: () => setFilters({...filters, season: 'All'}) });
               if (filters.pantryReady) activeFiltersList.push({ key: 'pantryReady', label: '🥫 Pantry', clear: () => setFilters({...filters, pantryReady: false}) });
@@ -5658,7 +5658,7 @@
               return (
                 <>
                   {/* Filter summary bar */}
-                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-sm text-gray-500 font-medium">
                       {displayRecipes.length} recipe{displayRecipes.length !== 1 ? 's' : ''}
                     </span>
