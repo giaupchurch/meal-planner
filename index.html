@@ -4049,17 +4049,18 @@
 
     // Add/Edit Recipe Modal
     function AddEditRecipeModal({ recipe, onSave, onDelete, onClose }) {
-      const isEditing = !!recipe;
+      const isEditing = !!recipe?.id;
       const [form, setForm] = useState(() => {
         if (recipe) return { ...getDefaultRecipe(), ...recipe };
         return getDefaultRecipe();
       });
       const [errors, setErrors] = useState([]);
       const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+      const hasData = !!recipe;
       const [expandedSections, setExpandedSections] = useState({
-        ingredients: isEditing && form.ingredients?.length > 0,
-        instructions: isEditing && form.instructions?.length > 0,
-        notes: isEditing && (form.notes || form.link || form.suggestedSides?.length > 0)
+        ingredients: hasData && form.ingredients?.length > 0,
+        instructions: hasData && form.instructions?.length > 0,
+        notes: hasData && (form.notes || form.link || form.suggestedSides?.length > 0)
       });
 
       const toggleSection = (section) => {
@@ -4484,6 +4485,251 @@
           </div>
         </div>
       );
+    }
+
+    // URL Import Modal - paste a recipe URL, scrape JSON-LD, pre-fill form
+    function URLImportModal({ onImport, onClose }) {
+      const [url, setUrl] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState('');
+      const [preview, setPreview] = useState(null);
+
+      const parseTimeToMinutes = (isoStr) => {
+        if (!isoStr) return 0;
+        const match = isoStr.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
+        if (!match) return 0;
+        return (parseInt(match[1] || 0) * 60) + parseInt(match[2] || 0);
+      };
+
+      const formatTime = (mins) => {
+        if (!mins || mins <= 0) return '';
+        if (mins < 60) return `${mins} min`;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return m > 0 ? `${h} hr ${m} min` : `${h} hr`;
+      };
+
+      const parseInstructions = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) {
+          return data.map(item => {
+            if (typeof item === 'string') return item;
+            if (item['@type'] === 'HowToStep') return item.text || '';
+            if (item['@type'] === 'HowToSection') {
+              return (item.itemListElement || []).map(step => step.text || '').filter(Boolean);
+            }
+            return '';
+          }).flat().filter(Boolean);
+        }
+        return [];
+      };
+
+      const parseIngredients = (data) => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data.map(i => typeof i === 'string' ? i : '').filter(Boolean);
+        return [];
+      };
+
+      const fetchRecipe = async () => {
+        if (!url.trim()) return;
+        setLoading(true);
+        setError('');
+        setPreview(null);
+
+        try {
+          // Use allorigins CORS proxy
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url.trim())}`;
+          const response = await fetch(proxyUrl);
+          if (!response.ok) throw new Error('Failed to fetch page');
+          const html = await response.text();
+
+          // Parse JSON-LD
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+
+          let recipeData = null;
+          for (const script of scripts) {
+            try {
+              let data = JSON.parse(script.textContent);
+              // Handle @graph arrays
+              if (data['@graph']) data = data['@graph'];
+              if (Array.isArray(data)) {
+                recipeData = data.find(item => item['@type'] === 'Recipe');
+              } else if (data['@type'] === 'Recipe') {
+                recipeData = data;
+              }
+              if (recipeData) break;
+            } catch (e) { /* skip invalid JSON-LD */ }
+          }
+
+          if (recipeData) {
+            const totalMins = parseTimeToMinutes(recipeData.totalTime);
+            const prepMins = parseTimeToMinutes(recipeData.prepTime);
+            const cookMins = parseTimeToMinutes(recipeData.cookTime);
+            const handsOn = prepMins || cookMins || Math.round(totalMins * 0.6);
+
+            const imported = {
+              name: recipeData.name || '',
+              shortName: (recipeData.name || '').length > 25 ? '' : recipeData.name || '',
+              image: Array.isArray(recipeData.image) ? recipeData.image[0] : (typeof recipeData.image === 'string' ? recipeData.image : recipeData.image?.url || ''),
+              ingredients: parseIngredients(recipeData.recipeIngredient),
+              instructions: parseInstructions(recipeData.recipeInstructions),
+              totalTime: formatTime(totalMins),
+              handsOnTime: handsOn,
+              link: url.trim()
+            };
+            setPreview(imported);
+          } else {
+            // Fallback: try og:tags
+            const ogTitle = doc.querySelector('meta[property="og:title"]')?.content;
+            const ogImage = doc.querySelector('meta[property="og:image"]')?.content;
+            if (ogTitle) {
+              setPreview({
+                name: ogTitle,
+                shortName: ogTitle.length > 25 ? '' : ogTitle,
+                image: ogImage || '',
+                ingredients: [],
+                instructions: [],
+                totalTime: '',
+                handsOnTime: 0,
+                link: url.trim()
+              });
+              setError('No structured recipe data found. Basic info extracted — you\'ll need to fill in details manually.');
+            } else {
+              setError('Could not find recipe data on this page. Try a recipe site like AllRecipes, Half Baked Harvest, etc.');
+            }
+          }
+        } catch (e) {
+          setError(`Import failed: ${e.message}. Try a different URL or add the recipe manually.`);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const inputClass = "w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sage-400 focus:border-transparent";
+
+      return (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+          <div
+            className="bg-white w-full max-w-lg max-h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col shadow-soft-lg"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800">Import from URL</h2>
+              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* URL input */}
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  className={inputClass + " flex-1"}
+                  placeholder="Paste recipe URL..."
+                  value={url}
+                  onChange={e => setUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && fetchRecipe()}
+                />
+                <button
+                  onClick={fetchRecipe}
+                  disabled={loading || !url.trim()}
+                  className="px-4 py-2.5 btn-primary text-white rounded-xl font-semibold text-sm disabled:opacity-50 transition"
+                >
+                  {loading ? '...' : 'Fetch'}
+                </button>
+              </div>
+
+              {error && (
+                <div className="p-3 bg-amber-50 rounded-xl text-sm text-amber-700">{error}</div>
+              )}
+
+              {/* Preview */}
+              {preview && (
+                <div className="space-y-3">
+                  {preview.image && (
+                    <img src={preview.image} alt="" className="w-full h-40 object-cover rounded-xl" onError={e => e.target.style.display='none'} />
+                  )}
+                  <div>
+                    <p className="font-semibold text-gray-800">{preview.name}</p>
+                    {preview.totalTime && <p className="text-sm text-gray-500">⏱ {preview.totalTime}</p>}
+                  </div>
+                  {preview.ingredients.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Ingredients ({preview.ingredients.length})</p>
+                      <div className="max-h-32 overflow-y-auto text-sm text-gray-600 space-y-0.5">
+                        {preview.ingredients.map((ing, i) => (
+                          <p key={i} className="truncate">• {ing}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {preview.instructions.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Instructions ({preview.instructions.length} steps)</p>
+                      <p className="text-sm text-gray-500">Step 1: {preview.instructions[0].substring(0, 80)}...</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {preview && (
+              <div className="border-t border-gray-100 p-4">
+                <button
+                  onClick={() => onImport(preview)}
+                  className="w-full py-3 btn-primary text-white rounded-full font-semibold transition"
+                >
+                  Edit & Save Recipe →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // CSV Export utility
+    function exportRecipesToCSV(recipesArray) {
+      const escapeCSV = (val) => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+
+      const columns = [
+        'id', 'category', 'name', 'shortName', 'protein', 'cookingStyle',
+        'handsOnTime', 'totalTime', 'effort', 'healthy', 'season',
+        'madeBefore', 'familyFavorite', 'leftovers', 'pantryReady',
+        'goodForCrowd', 'freezerFriendly', 'goodForCamping', 'wingIt',
+        'incomplete', 'recipeGroup', 'quickMethod', 'link', 'notes',
+        'image', 'suggestedSides', 'ingredients', 'instructions'
+      ];
+
+      const header = columns.map(escapeCSV).join(',');
+      const rows = recipesArray.map(recipe => {
+        return columns.map(col => {
+          const val = recipe[col];
+          if (Array.isArray(val)) return escapeCSV(val.join('; '));
+          if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+          return escapeCSV(val);
+        }).join(',');
+      });
+
+      const csv = [header, ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `meal-planner-recipes-${date}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // Modal component for day options
@@ -5230,6 +5476,19 @@
 
       const openEditRecipe = (recipe) => {
         setEditingRecipe(recipe);
+        setShowAddEditModal(true);
+      };
+
+      // URL Import modal state
+      const [showURLImport, setShowURLImport] = useState(false);
+
+      const handleURLImport = (importedData) => {
+        // Close URL modal and open Add modal pre-filled with imported data
+        setShowURLImport(false);
+        setEditingRecipe(null);
+        // Merge imported data with defaults so all fields exist
+        const preFilledRecipe = { ...getDefaultRecipe(), ...importedData };
+        setEditingRecipe(preFilledRecipe);
         setShowAddEditModal(true);
       };
 
@@ -6303,6 +6562,20 @@
                     >
                       +
                     </button>
+                    <button
+                      onClick={() => setShowURLImport(true)}
+                      className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full text-xs transition"
+                      title="Import from URL"
+                    >
+                      🔗
+                    </button>
+                    <button
+                      onClick={() => exportRecipesToCSV(allRecipes)}
+                      className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full text-xs transition"
+                      title="Export CSV"
+                    >
+                      📥
+                    </button>
                     {activeFiltersList.length > 0 && (
                       <>
                         <span className="text-gray-300">•</span>
@@ -6636,7 +6909,7 @@
             <AddEditRecipeModal
               recipe={editingRecipe}
               onSave={(recipeData) => {
-                if (editingRecipe) {
+                if (editingRecipe?.id) {
                   handleUpdateRecipe(editingRecipe.id, recipeData);
                   setToast('Recipe updated!');
                 } else {
@@ -6653,6 +6926,14 @@
                 setEditingRecipe(null);
               }}
               onClose={() => { setShowAddEditModal(false); setEditingRecipe(null); }}
+            />
+          )}
+
+          {/* URL Import Modal */}
+          {showURLImport && (
+            <URLImportModal
+              onImport={handleURLImport}
+              onClose={() => setShowURLImport(false)}
             />
           )}
 
