@@ -3889,7 +3889,7 @@
     };
 
     // Recipe Detail Modal component
-    function RecipeDetailModal({ recipe, onClose, onEdit }) {
+    function RecipeDetailModal({ recipe, onClose, onEdit, onAddToWeek }) {
       if (!recipe) return null;
 
       return (
@@ -4013,7 +4013,7 @@
               )}
             </div>
 
-            {/* Footer with link + edit */}
+            {/* Footer with link + actions */}
             <div className="border-t border-gray-100 p-4 space-y-2">
               {recipe.link && (
                 <a
@@ -4024,6 +4024,14 @@
                 >
                   View Original Recipe →
                 </a>
+              )}
+              {onAddToWeek && (
+                <button
+                  onClick={() => { onAddToWeek(recipe); onClose(); }}
+                  className="w-full py-3 bg-sage-100 hover:bg-sage-200 text-sage-700 rounded-full font-semibold transition text-sm"
+                >
+                  📅 Add to Meal Plan
+                </button>
               )}
               <div className="flex gap-2">
                 {onEdit && (
@@ -4232,19 +4240,41 @@
                     <input
                       type="number"
                       className={inputClass}
-                      value={form.handsOnTime}
-                      onChange={e => updateField('handsOnTime', parseInt(e.target.value) || 0)}
+                      value={form.handsOnTime === 0 ? '' : form.handsOnTime}
+                      onChange={e => updateField('handsOnTime', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                      placeholder="0"
                     />
                   </div>
                   <div>
                     <label className={labelClass}>Total Time</label>
-                    <input
-                      type="text"
-                      className={inputClass}
-                      placeholder="e.g., 45 min"
-                      value={form.totalTime}
-                      onChange={e => updateField('totalTime', e.target.value)}
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className={inputClass}
+                        placeholder="45"
+                        value={(() => {
+                          const str = form.totalTime || '';
+                          let mins = 0;
+                          const hrMatch = str.match(/(\d+)\s*hr/);
+                          const minMatch = str.match(/(\d+)\s*min/);
+                          if (hrMatch) mins += parseInt(hrMatch[1]) * 60;
+                          if (minMatch) mins += parseInt(minMatch[1]);
+                          if (mins === 0 && str.match(/^\d+$/)) mins = parseInt(str);
+                          return mins || '';
+                        })()}
+                        onChange={e => {
+                          const mins = parseInt(e.target.value) || 0;
+                          if (mins === 0) { updateField('totalTime', ''); return; }
+                          if (mins < 60) updateField('totalTime', `${mins} min`);
+                          else {
+                            const h = Math.floor(mins / 60);
+                            const m = mins % 60;
+                            updateField('totalTime', m > 0 ? `${h} hr ${m} min` : `${h} hr`);
+                          }
+                        }}
+                      />
+                      <span className="text-sm text-gray-500 flex-shrink-0">min</span>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -5492,12 +5522,54 @@
         setShowAddEditModal(true);
       };
 
-      const [weekPlan, setWeekPlan] = useState({
+      const defaultWeekPlan = {
         Tuesday: { status: 'na' },
         Friday: { status: 'na' },
         Saturday: { status: 'na' },
         Sunday: { status: 'na' }
+      };
+      const [weekPlan, setWeekPlan] = useState(() => {
+        try {
+          const saved = localStorage.getItem('mealPlannerWeekPlan');
+          if (!saved) return defaultWeekPlan;
+          // Saved format uses recipeId; rehydrate with full recipe objects
+          const parsed = JSON.parse(saved);
+          const hydrated = {};
+          for (const [day, plan] of Object.entries(parsed)) {
+            if (plan.recipeId) {
+              const recipe = allRecipes.find(r => r.id === plan.recipeId);
+              if (recipe) {
+                hydrated[day] = { recipe, isLeftover: plan.isLeftover || false, side: plan.side || null };
+              } else {
+                hydrated[day] = undefined;
+              }
+            } else if (plan.status) {
+              hydrated[day] = { status: plan.status };
+            } else {
+              hydrated[day] = plan;
+            }
+          }
+          return hydrated;
+        } catch { return defaultWeekPlan; }
       });
+
+      // Persist weekPlan to localStorage (store recipe IDs, not full objects)
+      useEffect(() => {
+        try {
+          const toSave = {};
+          for (const [day, plan] of Object.entries(weekPlan)) {
+            if (!plan) continue;
+            if (plan.recipe) {
+              toSave[day] = { recipeId: plan.recipe.id, isLeftover: plan.isLeftover || false, side: plan.side || null };
+            } else if (plan.status) {
+              toSave[day] = { status: plan.status };
+            }
+          }
+          localStorage.setItem('mealPlannerWeekPlan', JSON.stringify(toSave));
+        } catch (e) {
+          console.error('Failed to save week plan:', e);
+        }
+      }, [weekPlan]);
       /*
        * ============================================
        * MEAL PLANNER - FILTER & DISPLAY CONDITIONS
@@ -5546,7 +5618,10 @@
        *     • Green "Done" button at bottom
        * - Filter summary: Shows active filters as removable chips above recipe list
        */
-      const [filters, setFilters] = useState({
+      // Page navigation (plan, browse, grocery) - declared early for filter routing
+      const [currentPage, setCurrentPage] = useState('plan');
+
+      const defaultFilters = {
         category: 'Dinner',
         protein: 'All',
         cookingStyle: 'All',
@@ -5560,9 +5635,18 @@
         pantryReady: false,
         goodForCrowd: false,
         freezerFriendly: false
-      });
-      const [showFilters, setShowFilters] = useState(false);
-      const [showMoreFilters, setShowMoreFilters] = useState(false);
+      };
+      // Independent filters for plan and browse pages
+      const [planFilters, setPlanFilters] = useState({...defaultFilters});
+      const [browseFilters, setBrowseFilters] = useState({...defaultFilters});
+      const [planShowFilters, setPlanShowFilters] = useState(false);
+      const [browseShowFilters, setBrowseShowFilters] = useState(false);
+
+      // Active filters/showFilters based on current page
+      const filters = currentPage === 'browse' ? browseFilters : planFilters;
+      const setFilters = currentPage === 'browse' ? setBrowseFilters : setPlanFilters;
+      const showFilters = currentPage === 'browse' ? browseShowFilters : planShowFilters;
+      const setShowFilters = currentPage === 'browse' ? setBrowseShowFilters : setPlanShowFilters;
       const [selectedDay, setSelectedDay] = useState(null);
       const [selectedRecipe, setSelectedRecipe] = useState(null);
       const [toast, setToast] = useState(null);
@@ -5578,9 +5662,6 @@
       const [presetName, setPresetName] = useState('');
       const [pendingPreset, setPendingPreset] = useState(null);
       const [showConflictDialog, setShowConflictDialog] = useState(false);
-
-      // Page navigation (plan, browse, grocery)
-      const [currentPage, setCurrentPage] = useState('plan');
 
       // Multi-select mode for narrowing down
       const [selectMode, setSelectMode] = useState(false);
@@ -5675,7 +5756,7 @@
           if (filters.freezerFriendly && !recipe.freezerFriendly) return false;
           return true;
         });
-      }, [allRecipes, filters, searchTerm, wantToTry]);
+      }, [allRecipes, filters, searchTerm, wantToTry, currentPage]);
 
       const hasActiveSecondaryFilters = filters.category !== 'All' || filters.protein !== 'All' || filters.season !== 'All';
 
@@ -5893,22 +5974,7 @@
 
       // Reset filters
       const resetFilters = () => {
-        setFilters({
-          category: 'Dinner',
-          protein: 'All',
-          cookingStyle: 'All',
-          effort: 'All',
-          handsOnTime: 'All',
-          madeBefore: 'All',
-          familyFavorite: false,
-          season: 'All',
-          healthy: false,
-          leftovers: false,
-          pantryReady: false,
-          goodForCrowd: false,
-          freezerFriendly: false
-        });
-        setShowMoreFilters(false);
+        setFilters({...defaultFilters});
       };
 
       // Surprise me
@@ -6119,7 +6185,7 @@
                       </div>
 
                       {dayPlan ? (
-                        <div className="min-h-[3.5rem]">
+                        <div className="min-h-[4.5rem]">
                           {dayPlan.isLeftover ? (
                             <div className="flex flex-col items-center justify-center">
                               <div className="text-[9px] text-gray-700 leading-tight font-semibold">
@@ -6136,7 +6202,7 @@
                                 {getShortName(dayPlan.recipe)}
                               </div>
                               {dayPlan.side && (
-                                <span className="text-sage-600 text-[8px] font-medium">+ side</span>
+                                <div className="text-sage-600 text-[8px] font-medium leading-tight mt-0.5 line-clamp-2">+ {dayPlan.side}</div>
                               )}
                             </div>
                           )}
@@ -6320,101 +6386,101 @@
             )}
 
             {showFilters && (
-              <div className="card p-5 mb-5 relative">
-                {/* Close button */}
+              <div className="card p-3 mb-4 relative">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3 pr-8">
+                  <h3 className="font-semibold text-gray-800 text-sm">Filters</h3>
+                  <button onClick={resetFilters} className="text-xs text-sage-600 hover:text-sage-700 font-semibold">
+                    Reset
+                  </button>
+                </div>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="absolute top-3 right-3 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 transition"
+                  className="absolute top-2.5 right-2.5 w-7 h-7 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-xs transition"
                 >
                   ✕
                 </button>
-                <div className="flex items-center justify-between mb-5 pr-10">
-                  <h3 className="font-semibold text-gray-800">Filter Recipes</h3>
-                  <button onClick={resetFilters} className="text-sm text-sage-600 hover:text-sage-700 font-semibold">
-                    Reset All
+
+                {/* Familiarity + Bookmarks */}
+                <div className="flex gap-1.5 mb-3">
+                  <button
+                    onClick={() => setFilters({...filters, experience: filters.experience === 'Made Before' ? 'All' : 'Made Before'})}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
+                      filters.experience === 'Made Before' ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    🔄 Tried
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, experience: filters.experience === 'New' ? 'All' : 'New'})}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
+                      filters.experience === 'New' ? 'bg-sage-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    ✨ New
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, experience: filters.experience === 'Want to Try' ? 'All' : 'Want to Try'})}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
+                      filters.experience === 'Want to Try' ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    💗 Try
+                  </button>
+                  <button
+                    onClick={() => setFilters({...filters, experience: filters.experience === 'Favorites' ? 'All' : 'Favorites'})}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
+                      filters.experience === 'Favorites' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    ⭐ Favs
                   </button>
                 </div>
 
-                {/* Experience - Two Groups (Option 2) */}
-                <div className="space-y-3 mb-5">
-                  {/* Familiarity row */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Familiarity</label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setFilters({...filters, experience: 'All'})}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
-                          filters.experience === 'All'
-                            ? 'bg-gray-300 text-gray-700'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, experience: 'Made Before'})}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
-                          filters.experience === 'Made Before'
-                            ? 'bg-sage-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        🔄 Tried
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, experience: 'New'})}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
-                          filters.experience === 'New'
-                            ? 'bg-sage-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        ✨ New
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bookmarks row */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Bookmarks</label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setFilters({...filters, experience: filters.experience === 'Want to Try' ? 'All' : 'Want to Try'})}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
-                          filters.experience === 'Want to Try'
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        💗 Want to Try
-                      </button>
-                      <button
-                        onClick={() => setFilters({...filters, experience: filters.experience === 'Favorites' ? 'All' : 'Favorites'})}
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold transition ${
-                          filters.experience === 'Favorites'
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        ⭐ Favorites
-                      </button>
-                    </div>
-                  </div>
+                {/* Category / Protein / Season - all on one row */}
+                <div className="grid grid-cols-3 gap-1.5 mb-3">
+                  <select
+                    value={filters.category}
+                    onChange={(e) => setFilters({...filters, category: e.target.value})}
+                    className={`w-full py-1.5 px-1.5 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                      filters.category !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select
+                    value={filters.protein}
+                    onChange={(e) => setFilters({...filters, protein: e.target.value})}
+                    className={`w-full py-1.5 px-1.5 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                      filters.protein !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    {PROTEINS.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  <select
+                    value={filters.season}
+                    onChange={(e) => setFilters({...filters, season: e.target.value})}
+                    className={`w-full py-1.5 px-1.5 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
+                      filters.season !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50 text-gray-600'
+                    }`}
+                  >
+                    {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
 
-                {/* Special filters - Pantry, Crowd, Freezer */}
-                <div className="flex flex-wrap gap-2 mb-4">
+                {/* Pantry / Crowd / Freezer - compact row */}
+                <div className="flex gap-1.5 mb-3">
                   <button
                     onClick={() => setFilters({...filters, pantryReady: !filters.pantryReady})}
-                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
                       filters.pantryReady ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    🥫 Pantry Ready
+                    🥫 Pantry
                   </button>
                   <button
                     onClick={() => setFilters({...filters, goodForCrowd: !filters.goodForCrowd})}
-                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
                       filters.goodForCrowd ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -6422,7 +6488,7 @@
                   </button>
                   <button
                     onClick={() => setFilters({...filters, freezerFriendly: !filters.freezerFriendly})}
-                    className={`px-3 py-2 rounded-full text-sm font-semibold transition ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition ${
                       filters.freezerFriendly ? 'bg-cyan-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -6430,71 +6496,10 @@
                   </button>
                 </div>
 
-                <button
-                  onClick={() => setShowMoreFilters(!showMoreFilters)}
-                  className={`w-full py-2 text-sm font-semibold rounded-xl transition ${
-                    hasActiveSecondaryFilters
-                      ? 'bg-sage-50 text-sage-600'
-                      : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                  }`}
-                >
-                  {showMoreFilters ? '− Less Filters' : '+ More Filters'}
-                  {hasActiveSecondaryFilters && !showMoreFilters && (
-                    <span className="ml-2 px-2 py-0.5 bg-sage-500 text-white rounded-full text-xs">
-                      {(filters.category !== 'All' ? 1 : 0) + (filters.protein !== 'All' ? 1 : 0) + (filters.season !== 'All' ? 1 : 0)}
-                    </span>
-                  )}
-                </button>
-
-                {showMoreFilters && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="mb-2">
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</label>
-                      <select
-                        value={filters.category}
-                        onChange={(e) => setFilters({...filters, category: e.target.value})}
-                        className={`mt-1 w-full p-2 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                          filters.category !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                        }`}
-                      >
-                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Protein</label>
-                        <select
-                          value={filters.protein}
-                          onChange={(e) => setFilters({...filters, protein: e.target.value})}
-                          className={`mt-1 w-full p-2 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                            filters.protein !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                          }`}
-                        >
-                          {PROTEINS.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Season</label>
-                        <select
-                          value={filters.season}
-                          onChange={(e) => setFilters({...filters, season: e.target.value})}
-                          className={`mt-1 w-full p-2 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-sage-300 outline-none transition ${
-                            filters.season !== 'All' ? 'bg-sage-100 text-sage-800' : 'bg-gray-50'
-                          }`}
-                        >
-                          {SEASONS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Done button */}
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="w-full mt-3 py-2 bg-sage-500 hover:bg-sage-600 text-white text-sm font-semibold rounded-xl transition"
+                  className="w-full py-2 bg-sage-500 hover:bg-sage-600 text-white text-xs font-semibold rounded-xl transition"
                 >
                   Done
                 </button>
@@ -6901,6 +6906,7 @@
               recipe={selectedRecipe}
               onClose={() => setSelectedRecipe(null)}
               onEdit={(recipe) => { setSelectedRecipe(null); openEditRecipe(recipe); }}
+              onAddToWeek={(recipe) => { addToWeek(recipe); }}
             />
           )}
 
